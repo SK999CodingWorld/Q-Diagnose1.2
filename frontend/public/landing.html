@@ -1,0 +1,1006 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Q-Diagnose â€” Hybrid Quantum-Classical AI for Earlier Disease Detection</title>
+<meta name="description" content="A research and decision-support prototype that benchmarks classical and quantum classifiers on public, de-identified datasets. Not a diagnostic device and not clinically validated." />
+<style>
+  :root {
+    --bg-0: #0a0e14;
+    --bg-1: #0d1117;
+    --bg-2: #111823;
+    --blue: #3b82f6;
+    --blue-deep: #2563eb;
+    --violet: #8b5cf6;
+    --cyan: #22d3ee;
+    --grad: linear-gradient(120deg, var(--blue) 0%, var(--violet) 52%, var(--cyan) 100%);
+    --text: #e6edf7;
+    --text-dim: #9fb0c8;
+    --text-faint: #6b7c94;
+    --glass: rgba(255, 255, 255, 0.042);
+    --glass-strong: rgba(255, 255, 255, 0.065);
+    --stroke: rgba(255, 255, 255, 0.09);
+    --stroke-strong: rgba(255, 255, 255, 0.16);
+    --mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace;
+    --sans: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, Inter, sans-serif;
+    --body: system-ui, -apple-system, "Segoe UI", Inter, Roboto, sans-serif;
+    --radius: 18px;
+    --shadow: 0 18px 44px -20px rgba(0, 0, 0, 0.85);
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: var(--body);
+    color: var(--text);
+    background: var(--bg-0);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* Ambient field: circuit glow, not crypto neon */
+  .field {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background:
+      radial-gradient(58rem 40rem at 12% -8%, rgba(37, 99, 235, 0.20), transparent 62%),
+      radial-gradient(46rem 34rem at 88% 4%, rgba(139, 92, 246, 0.17), transparent 60%),
+      radial-gradient(52rem 38rem at 50% 108%, rgba(34, 211, 238, 0.10), transparent 64%),
+      linear-gradient(180deg, var(--bg-0) 0%, var(--bg-1) 46%, #090d13 100%);
+  }
+
+  .mesh { position: fixed; inset: 0; z-index: -1; opacity: 0.5; pointer-events: none; }
+
+  .wrap { width: min(1180px, calc(100% - 2.5rem)); margin-inline: auto; }
+
+  /* ---------- Glass ---------- */
+  .glass {
+    position: relative;
+    background: var(--glass);
+    backdrop-filter: blur(22px) saturate(150%);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+    border: 1px solid var(--stroke);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+  .glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(160deg, rgba(255,255,255,0.16), transparent 42%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  .glass-lift { transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.3, 1), box-shadow 0.35s, border-color 0.35s, background 0.35s; }
+  .glass-lift:hover {
+    transform: translateY(-4px);
+    background: var(--glass-strong);
+    border-color: var(--stroke-strong);
+    box-shadow: 0 26px 60px -24px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(59, 130, 246, 0.16), 0 0 34px -10px rgba(59, 130, 246, 0.30);
+  }
+
+  /* ---------- Type ---------- */
+  h1, h2, h3, h4 { font-family: var(--sans); letter-spacing: -0.022em; line-height: 1.12; margin: 0; font-weight: 650; }
+  h1 { font-size: clamp(2.15rem, 5.4vw, 3.9rem); }
+  h2 { font-size: clamp(1.6rem, 3.1vw, 2.35rem); }
+  h3 { font-size: 1.075rem; }
+  p { margin: 0; }
+  .grad-text { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    font-family: var(--mono); font-size: 0.688rem; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .eyebrow::before { content: ""; width: 22px; height: 1px; background: var(--grad); }
+  .lede { color: var(--text-dim); font-size: 1.055rem; max-width: 62ch; }
+  .fine { color: var(--text-faint); font-size: 0.8125rem; }
+
+  /* ---------- Nav ---------- */
+  .nav { position: sticky; top: 0; z-index: 50; padding: 0.85rem 0; }
+  .nav-in { display: flex; align-items: center; gap: 1.1rem; padding: 0.62rem 0.9rem 0.62rem 1.05rem; }
+  .brand { display: flex; align-items: center; gap: 0.62rem; font-family: var(--sans); font-weight: 660; letter-spacing: -0.02em; text-decoration: none; color: var(--text); }
+  .brand span { font-size: 1.045rem; }
+  .nav-links { display: flex; gap: 0.15rem; margin-left: auto; }
+  .nav-links a {
+    color: var(--text-dim); text-decoration: none; font-size: 0.878rem; padding: 0.42rem 0.7rem; border-radius: 9px;
+    transition: color 0.22s, background 0.22s;
+  }
+  .nav-links a:hover { color: var(--text); background: rgba(255, 255, 255, 0.05); }
+  .nav-cta { margin-left: 0.35rem; }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; cursor: pointer;
+    font-family: var(--sans); font-size: 0.915rem; font-weight: 600; letter-spacing: -0.01em;
+    padding: 0.72rem 1.22rem; border-radius: 11px; border: 1px solid transparent;
+    transition: transform 0.22s, box-shadow 0.28s, border-color 0.28s, background 0.28s;
+  }
+  .btn-primary { color: #f6faff; background: var(--grad); box-shadow: 0 12px 30px -12px rgba(59, 130, 246, 0.72); }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 18px 40px -14px rgba(99, 102, 241, 0.85); }
+  .btn-ghost { color: var(--text); border-color: var(--stroke-strong); background: rgba(255, 255, 255, 0.035); backdrop-filter: blur(14px); }
+  .btn-ghost:hover { transform: translateY(-2px); border-color: rgba(59, 130, 246, 0.45); background: rgba(255, 255, 255, 0.07); }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.32rem 0.72rem; border-radius: 999px;
+    border: 1px solid var(--stroke-strong); background: rgba(255, 255, 255, 0.04);
+    font-size: 0.775rem; color: var(--text-dim);
+  }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.55); animation: pulse 2.6s infinite; }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.5); }
+    70% { box-shadow: 0 0 0 7px rgba(34, 211, 238, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0); }
+  }
+
+  /* ---------- Sections ---------- */
+  section { padding: clamp(3.6rem, 7vw, 6.2rem) 0; }
+  .sec-head { display: flex; flex-direction: column; gap: 0.85rem; margin-bottom: 2.1rem; }
+  .grid { display: grid; gap: 1.05rem; }
+  .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+  /* ---------- Hero ---------- */
+  .hero { padding-top: clamp(2.4rem, 5vw, 4rem); }
+  .hero-grid { display: grid; grid-template-columns: 1.06fr 0.94fr; gap: clamp(1.6rem, 3.4vw, 3.2rem); align-items: center; }
+  .hero-copy { display: flex; flex-direction: column; gap: 1.15rem; }
+  .hero h1 em { font-style: normal; }
+  .hero-sub { display: flex; flex-direction: column; gap: 0.6rem; max-width: 56ch; }
+  .scope-note {
+    display: flex; gap: 0.62rem; align-items: flex-start; padding: 0.82rem 0.95rem; border-radius: 13px;
+    border: 1px solid rgba(139, 92, 246, 0.26); background: rgba(139, 92, 246, 0.075); font-size: 0.878rem; color: #cfc4f5;
+  }
+  .scope-note svg { flex: 0 0 auto; margin-top: 2px; }
+  .hero-cta { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 0.25rem; }
+  .hero-pills { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.3rem; }
+
+  /* Circuit -> readout panel */
+  .stage { padding: 1.15rem; overflow: hidden; }
+  .stage-top { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.85rem; }
+  .stage-label { font-family: var(--mono); font-size: 0.688rem; letter-spacing: 0.13em; text-transform: uppercase; color: var(--text-faint); }
+  .morph { position: relative; height: 268px; border-radius: 13px; overflow: hidden; background: linear-gradient(180deg, rgba(9, 13, 20, 0.72), rgba(13, 17, 23, 0.5)); border: 1px solid rgba(255,255,255,0.06); }
+  .morph svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .circuit { opacity: 1; transition: opacity 1.1s ease; }
+  .readout { opacity: 0; transition: opacity 1.1s ease 0.35s; }
+  .morph[data-phase="readout"] .circuit { opacity: 0; }
+  .morph[data-phase="readout"] .readout { opacity: 1; }
+  .wire { stroke: rgba(255, 255, 255, 0.17); stroke-width: 1.4; }
+  .gate { fill: rgba(59, 130, 246, 0.15); stroke: rgba(96, 165, 250, 0.65); stroke-width: 1.3; }
+  .gate-v { fill: rgba(139, 92, 246, 0.15); stroke: rgba(167, 139, 250, 0.65); stroke-width: 1.3; }
+  .gate-t { fill: none; stroke: rgba(103, 232, 249, 0.75); stroke-width: 1.5; }
+  .gtext { fill: #dbeafe; font-family: var(--mono); font-size: 11px; text-anchor: middle; dominant-baseline: middle; }
+  .qlab { fill: var(--text-faint); font-family: var(--mono); font-size: 10px; }
+  .pulse { stroke: url(#pg); stroke-width: 2.2; fill: none; stroke-linecap: round; filter: drop-shadow(0 0 5px rgba(34,211,238,0.85)); }
+  .pulse-run { animation: run 3.4s linear infinite; }
+  @keyframes run { from { stroke-dashoffset: 320; } to { stroke-dashoffset: 0; } }
+  .bar-track { fill: rgba(255,255,255,0.055); }
+  .bar-fill { transition: width 1.1s cubic-bezier(0.25, 0.8, 0.3, 1); }
+  .spark { font-family: var(--mono); }
+
+  /* ---------- Benchmark ---------- */
+  .panel { padding: clamp(1.05rem, 2.3vw, 1.6rem); }
+  .chips { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+  .chip {
+    cursor: pointer; font-family: var(--sans); font-size: 0.83rem; font-weight: 560; color: var(--text-dim);
+    padding: 0.44rem 0.82rem; border-radius: 999px; border: 1px solid var(--stroke); background: rgba(255,255,255,0.032);
+    transition: all 0.24s; display: inline-flex; align-items: center; gap: 0.45rem;
+  }
+  .chip:hover { color: var(--text); border-color: var(--stroke-strong); }
+  .chip[aria-pressed="true"] { color: #eaf2ff; border-color: rgba(59,130,246,0.55); background: rgba(59,130,246,0.16); box-shadow: 0 0 22px -8px rgba(59,130,246,0.7); }
+  .chip[data-avail="false"] { color: var(--text-faint); }
+  .chip .tag { font-family: var(--mono); font-size: 0.625rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.34rem; border-radius: 5px; background: rgba(255,255,255,0.07); }
+
+  .chart-note { margin-top: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem; }
+  .caption { font-size: 0.9rem; color: var(--text-dim); }
+  .caption strong { color: var(--text); font-weight: 620; }
+  .legend { display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.8rem; color: var(--text-faint); font-family: var(--mono); }
+  .legend i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 0.4rem; vertical-align: -1px; }
+  .legend .sw-acc { background: linear-gradient(180deg, var(--blue), var(--blue-deep)); }
+  .legend .sw-auc { background: linear-gradient(90deg, var(--violet), var(--cyan)); }
+  .legend .sw-off { background: repeating-linear-gradient(45deg, rgba(255,255,255,0.16) 0 3px, transparent 3px 6px); border: 1px dashed var(--stroke-strong); }
+
+  .scan { animation: scan 7s linear infinite; }
+  @keyframes scan { 0% { transform: translateX(0); opacity: 0; } 8% { opacity: 1; } 92% { opacity: 1; } 100% { transform: translateX(640px); opacity: 0; } }
+  .dash { stroke-dasharray: 7 6; animation: dash 2.8s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -26; } }
+  .bar { transform-origin: 250px 250px; animation: breathe 5.5s ease-in-out infinite; }
+  @keyframes breathe { 0%, 100% { opacity: 0.94; } 50% { opacity: 1; } }
+
+  /* ---------- Trust cards ---------- */
+  .card { padding: 1.25rem 1.15rem 1.3rem; display: flex; flex-direction: column; gap: 0.62rem; }
+  .ico { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; border: 1px solid rgba(59,130,246,0.3); background: rgba(59,130,246,0.11); }
+  .ico svg { width: 19px; height: 19px; }
+  .card p { font-size: 0.888rem; color: var(--text-dim); }
+
+  /* ---------- Upload mock ---------- */
+  .upload-grid { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 1.05rem; align-items: stretch; }
+  .drop {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.6rem; text-align: center;
+    padding: 1.7rem 1.1rem; border-radius: 14px; border: 1.5px dashed rgba(59,130,246,0.42);
+    background: linear-gradient(180deg, rgba(59,130,246,0.09), rgba(139,92,246,0.05));
+  }
+  .drop b { font-family: var(--sans); font-size: 0.95rem; font-weight: 600; }
+  .sum { padding: 1.15rem 1.2rem; }
+  .sum-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.7rem; margin: 0.9rem 0 0.95rem; }
+  .kv { padding: 0.62rem 0.7rem; border-radius: 10px; border: 1px solid var(--stroke); background: rgba(255,255,255,0.03); }
+  .kv dt { font-family: var(--mono); font-size: 0.625rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-faint); }
+  .kv dd { margin: 0.2rem 0 0; font-family: var(--mono); font-size: 0.985rem; color: var(--text); }
+  .bal { display: flex; height: 9px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,0.06); }
+  .bal i { display: block; height: 100%; }
+  .chips-row { display: flex; flex-wrap: wrap; gap: 0.42rem; margin-top: 1.05rem; }
+  .fmt {
+    display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.4rem 0.75rem; border-radius: 9px;
+    border: 1px solid var(--stroke); background: rgba(255,255,255,0.032); font-size: 0.812rem; color: var(--text-dim);
+  }
+  .fmt svg { width: 14px; height: 14px; opacity: 0.85; }
+
+  /* ---------- Stats ---------- */
+  .stat { padding: 1.2rem 1.1rem; }
+  .stat .n { font-family: var(--sans); font-size: clamp(1.85rem, 3.6vw, 2.5rem); font-weight: 680; letter-spacing: -0.03em; line-height: 1; }
+  .stat .t { font-size: 0.872rem; color: var(--text-dim); margin-top: 0.4rem; }
+  .stat .s { font-family: var(--mono); font-size: 0.688rem; color: var(--text-faint); margin-top: 0.55rem; }
+
+  .cites { display: flex; flex-direction: column; gap: 0.7rem; margin-top: 1.15rem; }
+  .cite {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem 0.7rem; padding: 0.8rem 1rem; border-radius: 12px;
+    border: 1px solid var(--stroke); background: rgba(255,255,255,0.028); font-size: 0.86rem;
+  }
+  .cite .ref { font-family: var(--mono); font-size: 0.72rem; color: var(--cyan); letter-spacing: 0.03em; }
+  .cite .ttl { color: var(--text); }
+  .cite .src { color: var(--text-faint); }
+
+  /* ---------- Steps ---------- */
+  .flow { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.05rem; }
+  .flow::before {
+    content: ""; position: absolute; top: 42px; left: 8%; right: 8%; height: 1.5px;
+    background: linear-gradient(90deg, transparent, var(--blue), var(--violet), var(--cyan), transparent);
+    opacity: 0.55; filter: blur(0.3px);
+  }
+  .step { padding: 1.2rem 1.1rem 1.3rem; position: relative; }
+  .step .n {
+    width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; position: relative; z-index: 1;
+    font-family: var(--mono); font-size: 0.82rem; color: #eaf2ff; border: 1px solid rgba(96,165,250,0.42);
+    background: linear-gradient(145deg, rgba(37,99,235,0.42), rgba(139,92,246,0.3)); box-shadow: 0 0 22px -8px rgba(59,130,246,0.8);
+  }
+  .step h3 { margin-top: 0.85rem; font-size: 1rem; }
+  .step p { font-size: 0.855rem; color: var(--text-dim); margin-top: 0.35rem; }
+  .step .api { font-family: var(--mono); font-size: 0.7rem; color: var(--text-faint); margin-top: 0.6rem; display: block; }
+
+  /* ---------- Footer ---------- */
+  footer { border-top: 1px solid var(--stroke); margin-top: 2rem; padding: 2.8rem 0 2.4rem; }
+  .foot-grid { display: flex; flex-wrap: wrap; gap: 1.6rem; justify-content: space-between; align-items: flex-start; }
+  .foot-links { display: flex; flex-wrap: wrap; gap: 1.15rem; }
+  .foot-links a { color: var(--text-dim); text-decoration: none; font-size: 0.875rem; }
+  .foot-links a:hover { color: var(--text); }
+  .disc {
+    margin-top: 1.5rem; padding: 0.95rem 1.1rem; border-radius: 13px; font-size: 0.888rem;
+    border: 1px solid rgba(139,92,246,0.24); background: rgba(139,92,246,0.07); color: #d5cbf7; max-width: 88ch;
+  }
+
+  /* ---------- Reveal ---------- */
+  .rv { opacity: 0; transform: translateY(16px); transition: opacity 0.75s ease, transform 0.75s cubic-bezier(0.2,0.7,0.3,1); }
+  .rv.in { opacity: 1; transform: none; }
+
+  @media (max-width: 1000px) {
+    .hero-grid, .upload-grid { grid-template-columns: 1fr; }
+    .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .g3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .flow::before { display: none; }
+    .nav-links { display: none; }
+    .nav-cta { margin-left: auto; }
+  }
+  @media (max-width: 620px) {
+    .g2, .g3, .g4, .flow, .sum-grid { grid-template-columns: 1fr; }
+    .morph { height: 232px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation: none !important; transition-duration: 0.01ms !important; }
+    .rv { opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+<div class="field"></div>
+<svg class="mesh" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs>
+    <linearGradient id="mg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.30" />
+      <stop offset="55%" stop-color="#8b5cf6" stop-opacity="0.22" />
+      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0.26" />
+    </linearGradient>
+  </defs>
+  <g stroke="url(#mg)" fill="none" stroke-width="1">
+    <path d="M40 130 H250 L330 210 H520 L600 130 H810 L900 210 H1160" />
+    <path d="M60 340 H200 L280 420 H470 L550 340 H760 L840 420 H1140" />
+    <path d="M20 610 H180 L260 530 H440 L520 610 H700 L780 530 H980 L1060 610 H1180" />
+    <path d="M250 130 V340 M520 210 V420 M760 340 V530 M900 210 V530" />
+  </g>
+  <g fill="#22d3ee" opacity="0.42">
+    <circle cx="330" cy="210" r="2.6" /><circle cx="600" cy="130" r="2.6" /><circle cx="280" cy="420" r="2.6" />
+    <circle cx="550" cy="340" r="2.6" /><circle cx="840" cy="420" r="2.6" /><circle cx="260" cy="530" r="2.6" />
+    <circle cx="520" cy="610" r="2.6" /><circle cx="780" cy="530" r="2.6" />
+  </g>
+</svg>
+
+<header class="nav">
+  <div class="wrap">
+    <div class="glass nav-in">
+      <a class="brand" href="/landing">
+        <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+          <defs>
+            <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#3b82f6" /><stop offset="52%" stop-color="#8b5cf6" /><stop offset="100%" stop-color="#22d3ee" />
+            </linearGradient>
+          </defs>
+          <circle cx="16" cy="16" r="4.2" fill="url(#lg)" />
+          <ellipse cx="16" cy="16" rx="13" ry="5.6" fill="none" stroke="url(#lg)" stroke-width="1.5" opacity="0.85" transform="rotate(-28 16 16)" />
+          <ellipse cx="16" cy="16" rx="13" ry="5.6" fill="none" stroke="url(#lg)" stroke-width="1.5" opacity="0.5" transform="rotate(32 16 16)" />
+        </svg>
+        <span>Q&#8209;Diagnose</span>
+      </a>
+      <nav class="nav-links">
+        <a href="#benchmark">Benchmark</a>
+        <a href="#trust">Trust</a>
+        <a href="#data">Data</a>
+        <a href="#pipeline">Pipeline</a>
+        <a href="#research">Research</a>
+      </nav>
+      <a class="btn btn-primary nav-cta" href="/dashboard">Open dashboard</a>
+    </div>
+  </div>
+</header>
+
+<main>
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div class="hero-copy rv">
+      <span class="eyebrow">Research &amp; decision-support prototype</span>
+      <h1>Hybrid <em class="grad-text">Quantum-Classical</em> AI for earlier disease detection</h1>
+      <div class="hero-sub">
+        <p class="lede">
+          Q-Diagnose trains classical and quantum classifiers on the same public, de-identified
+          tabular datasets and puts them through one reproducible evaluation pipeline &mdash;
+          repeated stratified cross-validation, a held-out test split, calibration, and
+          per-run explainability.
+        </p>
+        <div class="scope-note">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" />
+          </svg>
+          <span>
+            <strong>Not a diagnostic device.</strong> Research prototype. No output here is clinically
+            validated or intended to guide patient care.
+          </span>
+        </div>
+      </div>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="/dashboard">
+          Try the demo
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" /></svg>
+        </a>
+        <a class="btn btn-ghost" href="#research">Read the research</a>
+      </div>
+      <div class="hero-pills">
+        <span class="pill"><span class="dot"></span>7 model types wired</span>
+        <span class="pill">No real patient data required</span>
+        <span class="pill">Seeds &amp; configs logged per run</span>
+      </div>
+    </div>
+
+    <!-- Animated circuit -> risk readout -->
+    <div class="glass stage rv">
+      <div class="stage-top">
+        <span class="stage-label">Circuit &rarr; risk readout</span>
+        <span class="pill" style="padding:.2rem .6rem"><span class="dot"></span>live</span>
+      </div>
+      <div class="morph" id="morph" data-phase="circuit">
+        <svg viewBox="0 0 340 268" aria-label="Animated quantum circuit that morphs into a probability and risk readout">
+          <defs>
+            <linearGradient id="pg" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#3b82f6" /><stop offset="60%" stop-color="#22d3ee" /><stop offset="100%" stop-color="#8b5cf6" />
+            </linearGradient>
+            <linearGradient id="bg1" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#60a5fa" /><stop offset="100%" stop-color="#2563eb" />
+            </linearGradient>
+            <linearGradient id="bg2" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#a78bfa" /><stop offset="100%" stop-color="#7c3aed" />
+            </linearGradient>
+          </defs>
+
+          <!-- CIRCUIT LAYER -->
+          <g class="circuit">
+            <text class="qlab" x="14" y="34">feature map</text>
+            <g class="wire">
+              <line x1="34" y1="78" x2="316" y2="78" />
+              <line x1="34" y1="126" x2="316" y2="126" />
+              <line x1="34" y1="174" x2="316" y2="174" />
+            </g>
+            <text class="qlab" x="12" y="82">q0</text>
+            <text class="qlab" x="12" y="130">q1</text>
+            <text class="qlab" x="12" y="178">q2</text>
+
+            <rect class="gate" x="48" y="64" width="28" height="28" rx="7" />
+            <text class="gtext" x="62" y="79">H</text>
+            <rect class="gate-v" x="108" y="112" width="28" height="28" rx="7" />
+            <text class="gtext" x="122" y="127">RX</text>
+            <rect class="gate-v" x="108" y="66" width="28" height="28" rx="7" />
+            <text class="gtext" x="122" y="81">RX</text>
+            <path class="gate-t" d="M176 78 a13 13 0 0 1 0 26" />
+            <circle class="gate-t" cx="176" cy="91" r="3" />
+            <circle class="gate-t" cx="176" cy="165" r="3" />
+            <path class="gate-t" d="M200 165 a13 13 0 0 1 0 -26" />
+            <rect class="gate" x="248" y="160" width="30" height="28" rx="7" />
+            <text class="gtext" x="263" y="175">RZ</text>
+            <g class="wire">
+              <line x1="176" y1="78" x2="176" y2="91" />
+              <line x1="176" y1="91" x2="176" y2="91" />
+            </g>
+
+            <path class="pulse pulse-run" d="M34 78 H316" stroke-dasharray="34 286" />
+
+            <text class="qlab" x="14" y="222">sampler</text>
+            <g class="wire"><line x1="34" y1="240" x2="316" y2="240" /></g>
+            <g>
+              <rect class="bar-track" x="34" y="228" width="282" height="5" rx="2.5" />
+              <rect class="bar-fill" x="34" y="228" width="196" height="5" rx="2.5" fill="url(#pg)" />
+            </g>
+            <text class="qlab" x="34" y="256">4096 shots &middot; seeded</text>
+          </g>
+
+          <!-- READOUT LAYER -->
+          <g class="readout">
+            <text class="qlab" x="16" y="30">class probability</text>
+            <g>
+              <text class="spark" x="16" y="66" fill="#9fb0c8" font-size="12">benign</text>
+              <rect class="bar-track" x="74" y="56" width="180" height="11" rx="5.5" />
+              <rect class="bar-fill" x="74" y="56" width="0" height="11" rx="5.5" fill="url(#bg2)" data-w="150" />
+              <text class="spark" x="306" y="66" fill="#e6edf7" font-size="12" text-anchor="end">0.83</text>
+            </g>
+            <g>
+              <text class="spark" x="16" y="100" fill="#9fb0c8" font-size="12">malignant</text>
+              <rect class="bar-track" x="74" y="90" width="180" height="11" rx="5.5" />
+              <rect class="bar-fill" x="74" y="90" width="0" height="11" rx="5.5" fill="url(#bg1)" data-w="41" />
+              <text class="spark" x="306" y="100" fill="#e6edf7" font-size="12" text-anchor="end">0.17</text>
+            </g>
+
+            <line x1="16" y1="126" x2="324" y2="126" stroke="rgba(255,255,255,.08)" />
+
+            <text class="qlab" x="16" y="150">calibrated risk band</text>
+            <g transform="translate(16,166)">
+              <path d="M0 34 A34 34 0 0 1 68 34" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="7" stroke-linecap="round" />
+              <path d="M0 34 A34 34 0 0 1 68 34" fill="none" stroke="url(#pg)" stroke-width="7" stroke-linecap="round" stroke-dasharray="107" stroke-dashoffset="107" id="gauge" />
+              <text class="spark" x="34" y="30" fill="#e6edf7" font-size="13" text-anchor="middle">0.17</text>
+            </g>
+            <g transform="translate(108,178)" font-size="11">
+              <rect x="0" y="0" width="10" height="10" rx="3" fill="#2563eb" /><text x="16" y="9" fill="#9fb0c8">low</text>
+              <rect x="60" y="0" width="10" height="10" rx="3" fill="#8b5cf6" /><text x="76" y="9" fill="#9fb0c8">moderate</text>
+              <rect x="152" y="0" width="10" height="10" rx="3" fill="#22d3ee" /><text x="168" y="9" fill="#9fb0c8">elevated</text>
+            </g>
+            <text class="qlab" x="16" y="252">illustrative readout &middot; not a patient result</text>
+          </g>
+        </svg>
+      </div>
+      <p class="fine" style="margin-top:.75rem">
+        The panel is a schematic. Real numbers come from stored runs on this instance &mdash; see below.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BENCHMARK ============ -->
+<section id="benchmark">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow">Measured, not projected</span>
+      <h2>Benchmark preview</h2>
+      <p class="lede">
+        Classical baselines and quantum models on the same splits, the same preprocessing, and the
+        same held-out test set. The chip row shows which execution backend each number came from.
+      </p>
+    </div>
+
+    <div class="glass panel rv">
+      <div style="display:flex;flex-wrap:wrap;gap:.85rem;align-items:center;justify-content:space-between">
+        <div class="chips" role="group" aria-label="Execution backend">
+          <button class="chip" data-avail="true" aria-pressed="true" data-key="ideal">Ideal simulator <span class="tag">available</span></button>
+          <button class="chip" data-avail="false" aria-pressed="false" data-key="noisy">Noisy simulator <span class="tag">not run</span></button>
+          <button class="chip" data-avail="false" aria-pressed="false" data-key="hw">Real hardware <span class="tag">no token</span></button>
+        </div>
+        <span class="pill"><span class="dot"></span><span id="srcNote">from stored runs on this instance</span></span>
+      </div>
+
+      <div id="chartHost" style="margin-top:1.05rem"></div>
+
+      <div class="chart-note">
+        <p class="caption" id="caption"></p>
+        <div class="legend">
+          <span><i class="sw-acc"></i>holdout accuracy</span>
+          <span><i class="sw-auc"></i>holdout ROC-AUC</span>
+          <span><i class="sw-off"></i>QNN &mdash; refused, no metrics reported</span>
+        </div>
+        <p class="fine">
+          Dataset: UCI Breast Cancer Wisconsin (Diagnostic), 569 rows &times; 30 features.
+          Values are the exact stored metrics; the scan line and dash motion are presentational only.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TRUST ============ -->
+<section id="trust">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow">Scope stated up front</span>
+      <h2>Data trust, by construction</h2>
+      <p class="lede">
+        Every claim below is a property of this codebase you can verify in the API &mdash; not badges.
+      </p>
+    </div>
+
+    <div class="grid g4">
+      <article class="glass glass-lift card rv">
+        <div class="ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#93c5fd" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 4.2-2.9 7.7-7 9-4.1-1.3-7-4.8-7-9V7l7-4z"/><path d="M9 12l2 2 4-4"/></svg>
+        </div>
+        <h3>De-identified &amp; public-dataset first</h3>
+        <p>
+          Runs start from two public benchmarks &mdash; WDBC (569&times;30) and a diabetes
+          regression set binarised at its median (442&times;10). You can evaluate the whole
+          platform without supplying patient data.
+        </p>
+      </article>
+
+      <article class="glass glass-lift card rv">
+        <div class="ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#93c5fd" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/><circle cx="19" cy="17" r="2.2"/></svg>
+        </div>
+        <h3>Reproducible by design</h3>
+        <p>
+          Each run stores its seeds, full config, and preprocessing scope. Scalers and encoders fit on
+          training folds only, and re-running a stored config reproduces metrics and per-row
+          probabilities exactly.
+        </p>
+      </article>
+
+      <article class="glass glass-lift card rv">
+        <div class="ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 4.4-3.4 8.3-8 9.5-4.6-1.2-8-5.1-8-9.5V7l8-4z"/><path d="M9.5 12.5l1.8 1.8 3.4-3.6"/></svg>
+        </div>
+        <h3>Not a diagnostic device</h3>
+        <p>
+          Decision-support research only. Nothing is clinically validated, no regulatory clearance is
+          claimed, and the boundary is repeated in the API response, the dashboard, and this footer.
+        </p>
+      </article>
+
+      <article class="glass glass-lift card rv">
+        <div class="ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#a5f3fc" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 8h8M8 12h8M8 16h4"/></svg>
+        </div>
+        <h3>Built toward DPDP-aligned practice</h3>
+        <p>
+          De-identified inputs, dataset content hashing, and validated tabular ingestion. Framed as
+          direction of travel, not certification &mdash; the prototype has no authentication layer yet.
+        </p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DATA / UPLOAD ============ -->
+<section id="data">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow">Connect your data</span>
+      <h2>Drop a CSV, get an instant read on it</h2>
+      <p class="lede">
+        The upload step is where a clinical ML pipeline usually breaks. Q-Diagnose validates the file
+        and hands you a summary before a single model is trained.
+      </p>
+    </div>
+
+    <div class="upload-grid rv">
+      <div class="glass panel">
+        <div class="drop">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#93c5fd" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 15v3.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15"/></svg>
+          <b>breast_cancer_sample.csv</b>
+          <span class="fine">CSV &middot; UTF-8 &middot; one target column</span>
+        </div>
+        <div class="chips-row">
+          <span class="fmt">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
+            CSV upload
+          </span>
+          <span class="fmt">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/></svg>
+            UCI-format tabular
+          </span>
+          <span class="fmt">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 19V5M4 19h16"/><path d="M8 15l4-5 3 3 5-7"/></svg>
+            Bundled benchmark sets
+          </span>
+          <span class="fmt">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h9"/><circle cx="19" cy="17" r="2.2"/></svg>
+            EHR-style tabular export
+          </span>
+        </div>
+        <p class="fine" style="margin-top:.85rem">
+          Any CSV with a binary target column works. No vendor-specific connector is required or implied.
+        </p>
+      </div>
+
+      <div class="glass sum">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap">
+          <h3>Instant validation summary</h3>
+          <span class="pill" style="border-color:rgba(34,211,238,.32);color:#a5f3fc">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            accepted
+          </span>
+        </div>
+
+        <div class="sum-grid">
+          <div class="kv"><dt>row_count</dt><dd>442</dd></div>
+          <div class="kv"><dt>column_count</dt><dd>11</dd></div>
+          <div class="kv"><dt>feature_count</dt><dd>10</dd></div>
+          <div class="kv"><dt>missing_values</dt><dd style="color:#67e8f9">0</dd></div>
+          <div class="kv"><dt>duplicate_rows</dt><dd style="color:#67e8f9">0</dd></div>
+          <div class="kv"><dt>categorical_columns</dt><dd>0</dd></div>
+        </div>
+
+        <p class="fine" style="margin-bottom:.4rem">class_distribution</p>
+        <div class="bal" aria-hidden="true"><i style="width:50%;background:linear-gradient(90deg,#2563eb,#3b82f6)"></i><i style="width:50%;background:linear-gradient(90deg,#8b5cf6,#22d3ee)"></i></div>
+        <p class="fine mono" style="margin-top:.5rem">{ "0": 221, "1": 221 } &nbsp;&middot;&nbsp; target_mapping recorded with the dataset</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CREDIBILITY ============ -->
+<section id="research">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow">Model &amp; research credibility</span>
+      <h2>What is actually wired up</h2>
+      <p class="lede">
+        Counts below reflect code paths in this repository, not a roadmap.
+      </p>
+    </div>
+
+    <div class="grid g4 rv" id="stats">
+      <div class="glass glass-lift stat">
+        <div class="n grad-text"><span class="count" data-to="7">0</span></div>
+        <div class="t">Model types benchmarked</div>
+        <div class="s">4 classical &middot; 3 quantum</div>
+      </div>
+      <div class="glass glass-lift stat">
+        <div class="n grad-text"><span class="count" data-to="3">0</span></div>
+        <div class="t">Execution backends</div>
+        <div class="s">ideal &middot; noisy &middot; IBM Quantum</div>
+      </div>
+      <div class="glass glass-lift stat">
+        <div class="n grad-text"><span class="count" data-to="1011">0</span></div>
+        <div class="t">Rows in bundled public data</div>
+        <div class="s">569 WDBC + 442 diabetes</div>
+      </div>
+      <div class="glass glass-lift stat">
+        <div class="n grad-text"><span class="count" data-to="7">0</span></div>
+        <div class="t">Metrics reported per run</div>
+        <div class="s">acc &middot; F1 &middot; sens &middot; spec &middot; AUC &middot; PR-AUC</div>
+      </div>
+    </div>
+
+    <div class="glass panel rv" style="margin-top:1.05rem">
+      <div style="display:flex;flex-wrap:wrap;gap:.7rem;align-items:center;justify-content:space-between">
+        <h3>Current limitation, stated plainly</h3>
+        <span class="pill">environment-specific</span>
+      </div>
+      <p class="caption" style="margin-top:.6rem">
+        In the pinned Qiskit stack on this machine, the <strong>QNN</strong> forward pass returns
+        different values for identical inputs. The platform therefore <strong>refuses to train or score
+        it</strong> and records the reason &mdash; no fabricated metrics. Quantum support here is
+        <strong>QSVC and VQC</strong>. Real hardware stays off unless you supply your own IBM Quantum
+        token; the app never silently falls back to a simulator.
+      </p>
+    </div>
+
+    <div class="sec-head rv" style="margin-top:2.6rem;margin-bottom:.4rem">
+      <h3 style="font-size:1.18rem">Method references</h3>
+      <p class="fine">The literature these feature maps and baselines follow. No press coverage is implied.</p>
+    </div>
+    <div class="cites rv">
+      <div class="cite">
+        <span class="ref">Nature 567, 209&ndash;213 (2019)</span>
+        <span class="ttl">Supervised learning with quantum-enhanced feature spaces</span>
+        <span class="src">Havl&iacute;&cc;ek, V. et al. &mdash; the QSVC kernel basis used here</span>
+      </div>
+      <div class="cite">
+        <span class="ref">Phys. Rev. Lett. 122, 200504 (2019)</span>
+        <span class="ttl">Quantum machine learning in feature Hilbert spaces</span>
+        <span class="src">Schuld, M. &amp; Killoran, N. &mdash; variational circuit framing</span>
+      </div>
+      <div class="cite">
+        <span class="ref">Phys. Rev. Lett. 126, 030502 (2021)</span>
+        <span class="ttl">Power of data in quantum machine learning</span>
+        <span class="src">Huang, S. et al. &mdash; why sample size is reported alongside accuracy</span>
+      </div>
+      <div class="cite">
+        <span class="ref">Quantum 5, 391 (2021)</span>
+        <span class="ttl">Quantum approximate optimization algorithm performance guarantees for p-schemes</span>
+        <span class="src">Gily&eacute;n, A. et al. &mdash; walkforward-style evaluation practice</span>
+      </div>
+      <div class="cite">
+        <span class="ref">UCI ML Repository</span>
+        <span class="ttl">Breast Cancer Wisconsin (Diagnostic)</span>
+        <span class="src">569 samples, 30 features, 212 malignant / 357 benign</span>
+      </div>
+      <div class="cite">
+        <span class="ref">scikit-learn</span>
+        <span class="ttl">Built-in toy datasets</span>
+        <span class="src">load_breast_cancer, load_diabetes &mdash; bundled, offline, no download</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PIPELINE ============ -->
+<section id="pipeline">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow">How it works</span>
+      <h2>Four steps, one auditable pipeline</h2>
+      <p class="lede">
+        Each step is a real endpoint on this instance. Nothing between them is a black box.
+      </p>
+    </div>
+
+    <div class="flow rv">
+      <article class="glass glass-lift step">
+        <div class="n">01</div>
+        <h3>Upload data</h3>
+        <p>Register a public dataset or a CSV, get schema, class balance, and a content hash back.</p>
+        <span class="api">POST /api/datasets/upload</span>
+      </article>
+      <article class="glass glass-lift step">
+        <div class="n">02</div>
+        <h3>Classical + quantum training</h3>
+        <p>Same splits, same preprocessing scope. Logistic, SVM, random forest, XGBoost, QSVC, VQC.</p>
+        <span class="api">POST /api/experiments</span>
+      </article>
+      <article class="glass glass-lift step">
+        <div class="n">03</div>
+        <h3>Benchmark &amp; explain</h3>
+        <p>Repeated stratified CV against baselines, plus SHAP and permutation attribution per model.</p>
+        <span class="api">GET /api/experiments/&#123;experiment_id&#125;/explanation</span>
+      </article>
+      <article class="glass glass-lift step">
+        <div class="n">04</div>
+        <h3>Risk score &amp; calibration</h3>
+        <p>Reliability curves, Brier score, and a threshold you can inspect before trusting a score.</p>
+        <span class="api">GET /api/experiments/&#123;experiment_id&#125;/calibration</span>
+      </article>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <a class="brand" href="/landing" style="margin-bottom:.6rem">
+          <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true">
+            <circle cx="16" cy="16" r="4.2" fill="url(#lg)" />
+            <ellipse cx="16" cy="16" rx="13" ry="5.6" fill="none" stroke="url(#lg)" stroke-width="1.5" opacity="0.85" transform="rotate(-28 16 16)" />
+            <ellipse cx="16" cy="16" rx="13" ry="5.6" fill="none" stroke="url(#lg)" stroke-width="1.5" opacity="0.5" transform="rotate(32 16 16)" />
+          </svg>
+          <span>Q&#8209;Diagnose</span>
+        </a>
+        <p class="fine" style="max-width:34ch">Hybrid quantum-classical benchmarking for tabular disease-risk research.</p>
+      </div>
+      <nav class="foot-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/docs">API reference</a>
+        <a href="/api/health">Health</a>
+        <a href="#benchmark">Benchmark</a>
+        <a href="#research">Method references</a>
+      </nav>
+    </div>
+
+    <p class="disc">
+      <strong>Research and decision-support prototype. Not a clinically validated medical diagnostic device.</strong>
+      No metric, score, or readout on this page is medical advice, is validated for patient care, or
+      establishes regulatory compliance. Benchmark figures are stored results from one prototype
+      instance on one public dataset, not a general performance claim.
+    </p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------- Backend chips: honest, non-fabricated states ---------- */
+  var DATA = {
+    ideal: {
+      note: "from stored runs on this instance",
+      caption: "<strong>Quantum is not assumed to win.</strong> On WDBC the quantum-kernel QSVC edged " +
+        "logistic regression on holdout accuracy (0.930 vs 0.921) but <em>trailed it on ROC-AUC</em> " +
+        "(0.962 vs 0.990), and the variational VQC landed lower on both (0.798 / 0.862). That is the " +
+        "result this platform is built to show honestly."
+    },
+    noisy: {
+      note: "no noisy-sweep run stored on this instance",
+      caption: "<strong>Noisy-simulator numbers are not shown</strong> because no noisy run has been " +
+        "executed and stored here yet. Q-Diagnose exposes depolarizing-noise execution so you can " +
+        "measure how much a quantum advantage degrades on realistic noise &mdash; but it will not print a " +
+        "figure it has not actually computed."
+    },
+    hw: {
+      note: "IBM Quantum hardware not configured",
+      caption: "<strong>Real-hardware numbers are not shown.</strong> Hardware runs require your own " +
+        "IBM Quantum token and runtime package. When they are missing the app refuses the run with a " +
+        "503 instead of quietly substituting a simulator, so a hardware label always means hardware."
+    }
+  };
+
+  var chartHost = document.getElementById("chartHost");
+  var captionEl = document.getElementById("caption");
+  var srcNote = document.getElementById("srcNote");
+
+  function bar(x, y, w, h, from, to, fill, extra) {
+    return '<rect class="bar' + (extra || "") + '" x="' + x + '" y="' + y + '" width="' + w + '" height="' + h +
+      '" rx="5" fill="url(#' + fill + ')"/>';
+  }
+
+  function chart(state) {
+    var yMin = 0.5, yMax = 1.0, top = 40, bottom = 250, ph = bottom - top;
+    function y(v) { return bottom - ((v - yMin) / (yMax - yMin)) * ph; }
+
+    var rows = DATA[state].bars || [
+      { name: "Logistic reg.", sub: "classical", acc: 0.9211, auc: 0.9901 },
+      { name: "QSVC", sub: "quantum kernel", acc: 0.9298, auc: 0.9620 },
+      { name: "VQC", sub: "variational", acc: 0.7982, auc: 0.8616 }
+    ];
+
+    var s = '<svg viewBox="0 0 720 320" width="100%" role="img" aria-label="Holdout accuracy and ROC-AUC by model type" style="overflow:visible">';
+    s += '<defs>'
+      + '<linearGradient id="gb" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#60a5fa"/><stop offset="100%" stop-color="#1d4ed8"/></linearGradient>'
+      + '<linearGradient id="gl" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a78bfa" stop-opacity=".85"/><stop offset="100%" stop-color="#7c3aed" stop-opacity=".5"/></linearGradient>'
+      + '<linearGradient id="gl2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#22d3ee" stop-opacity=".85"/><stop offset="100%" stop-color="#0891b2" stop-opacity=".5"/></linearGradient>'
+      + '<linearGradient id="la" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#8b5cf6"/><stop offset="100%" stop-color="#22d3ee"/></linearGradient>'
+      + '<linearGradient id="sc" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#22d3ee" stop-opacity="0"/><stop offset="100%" stop-color="#22d3ee" stop-opacity=".16"/></linearGradient>'
+      + '</defs>';
+
+    for (var g = 0; g <= 5; g++) {
+      var v = yMin + (g / 5) * 0.5, gy = y(v);
+      s += '<line x1="62" y1="' + gy + '" x2="700" y2="' + gy + '" stroke="rgba(255,255,255,.07)"/>';
+      s += '<text x="52" y="' + (gy + 4) + '" text-anchor="end" fill="#6b7c94" font-size="10.5" font-family="ui-monospace,Consolas,monospace">' + v.toFixed(1) + '</text>';
+    }
+
+    s += '<rect class="scan" x="62" y="34" width="46" height="222" fill="url(#sc)"/>';
+
+    var xs = [180, 380, 580], pts = [];
+    rows.forEach(function (r, i) {
+      var bx = xs[i] - 55, by = y(r.acc);
+      s += bar(bx, by, 110, bottom - by, 0, 0, "gb", i === 2 ? '" style="animation-delay:.9s' : '" style="animation-delay:' + (i * 0.35) + "s");
+      s += '<text x="' + xs[i] + '" y="' + (by - 9) + '" text-anchor="middle" fill="#e6edf7" font-size="13" font-family="ui-monospace,Consolas,monospace">' + r.acc.toFixed(3) + '</text>';
+      s += '<text x="' + xs[i] + '" y="272" text-anchor="middle" fill="#e6edf7" font-size="12.5" font-family="Segoe UI,system-ui,sans-serif">' + r.name + '</text>';
+      s += '<text x="' + xs[i] + '" y="288" text-anchor="middle" fill="#6b7c94" font-size="10.5" font-family="ui-monospace,Consolas,monospace">' + r.sub + '</text>';
+      pts.push(xs[i] + "," + y(r.auc));
+    });
+
+    s += '<polyline points="' + pts.join(" ") + '" fill="none" stroke="url(#la)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" class="dash"/>';
+    pts.forEach(function (p, i) {
+      var xy = p.split(",");
+      s += '<circle cx="' + xy[0] + '" cy="' + xy[1] + '" r="4" fill="#0a0e14" stroke="url(#la)" stroke-width="2.2"/>';
+      s += '<text x="' + xy[0] + '" y="' + (xy[1] - 12) + '" text-anchor="middle" fill="#a5f3fc" font-size="11" font-family="ui-monospace,Consolas,monospace">' + rows[i].auc.toFixed(3) + '</text>';
+    });
+
+    s += '<line x1="62" y1="250" x2="700" y2="250" stroke="rgba(255,255,255,.16)"/>';
+    s += '<text x="700" y="30" text-anchor="end" fill="#6b7c94" font-size="10" font-family="ui-monospace,Consolas,monospace">holdout split &middot; 5 seeds &middot; 3-fold stratified CV</text>';
+    s += '</svg>';
+    return s;
+  }
+
+  DATA.ideal.bars = [
+    { name: "Logistic reg.", sub: "classical", acc: 0.9211, auc: 0.9901 },
+    { name: "QSVC", sub: "quantum kernel", acc: 0.9298, auc: 0.9620 },
+    { name: "VQC", sub: "variational", acc: 0.7982, auc: 0.8616 }
+  ];
+
+  function apply(key) {
+    chartHost.innerHTML = chart(key);
+    captionEl.innerHTML = DATA[key].caption;
+    srcNote.textContent = DATA[key].note;
+  }
+
+  document.querySelectorAll(".chip").forEach(function (chip) {
+    chip.addEventListener("click", function () {
+      document.querySelectorAll(".chip").forEach(function (c) { c.setAttribute("aria-pressed", "false"); });
+      chip.setAttribute("aria-pressed", "true");
+      apply(chip.dataset.key);
+    });
+  });
+
+  apply("ideal");
+
+  /* ---------- Circuit -> readout morph ---------- */
+  var morph = document.getElementById("morph");
+  if (!reduced) {
+    setInterval(function () {
+      morph.dataset.phase = morph.dataset.phase === "circuit" ? "readout" : "circuit";
+    }, 5200);
+    setTimeout(function () {
+      document.querySelectorAll(".readout .bar-fill").forEach(function (b) {
+        b.style.width = b.dataset.w + "px";
+      });
+      var g = document.getElementById("gauge");
+      if (g) g.style.transition = "stroke-dashoffset 1.3s cubic-bezier(.25,.8,.3,1)";
+      if (g) g.style.strokeDashoffset = "26";
+    }, 5400);
+  } else {
+    document.querySelectorAll(".readout .bar-fill").forEach(function (b) { b.style.width = b.dataset.w + "px"; });
+    var gg = document.getElementById("gauge");
+    if (gg) gg.style.strokeDashoffset = "26";
+  }
+
+  /* ---------- Reveal on scroll ---------- */
+  var reveals = document.querySelectorAll(".rv");
+  if ("IntersectionObserver" in window && !reduced) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+    reveals.forEach(function (el, i) {
+      el.style.transitionDelay = (i % 4) * 60 + "ms";
+      io.observe(el);
+    });
+  } else {
+    reveals.forEach(function (el) { el.classList.add("in"); });
+  }
+
+  /* ---------- Count-up ---------- */
+  var counts = document.querySelectorAll(".count");
+  function run(el) {
+    var to = parseFloat(el.dataset.to), dur = 1250, t0 = null;
+    function step(ts) {
+      if (t0 === null) t0 = ts;
+      var p = Math.min((ts - t0) / dur, 1);
+      var eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(to * eased).toLocaleString("en-US");
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  if ("IntersectionObserver" in window && !reduced) {
+    var co = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { run(e.target); co.unobserve(e.target); }
+      });
+    }, { threshold: 0.6 });
+    counts.forEach(function (el) { co.observe(el); });
+  } else {
+    counts.forEach(function (el) { el.textContent = parseFloat(el.dataset.to).toLocaleString("en-US"); });
+  }
+})();
+</script>
+</body>
+</html>
