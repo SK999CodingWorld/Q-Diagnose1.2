@@ -16,7 +16,7 @@ services:
         value: https://yqtcvwuhtcdacyjoyxuj.supabase.co
       - key: SUPABASE_PUBLISHABLE_KEY
         sync: false
-      - key: QDIAGNOSE_ALLOWED_USER_ID
+      - key: QDIAGNOSE_ALLOWED_EMAIL
         sync: false
       - key: VITE_SUPABASE_URL
         value: https://yqtcvwuhtcdacyjoyxuj.supabase.co

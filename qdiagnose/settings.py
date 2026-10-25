@@ -61,6 +61,7 @@ class Settings:
     supabase_url: str | None
     supabase_publishable_key: str | None
     supabase_allowed_user_id: str | None
+    supabase_allowed_email: str | None
     max_report_file_bytes: int
     max_report_files: int
     max_report_total_bytes: int
@@ -81,10 +82,11 @@ class Settings:
         supabase_url = os.getenv("SUPABASE_URL", "https://yqtcvwuhtcdacyjoyxuj.supabase.co").strip().rstrip("/")
         supabase_key = os.getenv("SUPABASE_PUBLISHABLE_KEY", "").strip() or None
         allowed_user_id = os.getenv("QDIAGNOSE_ALLOWED_USER_ID", "").strip() or None
-        if auth_mode == "supabase" and not (supabase_url and supabase_key and allowed_user_id):
+        allowed_email = os.getenv("QDIAGNOSE_ALLOWED_EMAIL", "").strip().casefold() or None
+        if auth_mode == "supabase" and not (supabase_url and supabase_key and (allowed_user_id or allowed_email)):
             raise ValueError(
                 "Supabase auth requires SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, "
-                "and QDIAGNOSE_ALLOWED_USER_ID."
+                "and either QDIAGNOSE_ALLOWED_USER_ID or QDIAGNOSE_ALLOWED_EMAIL."
             )
         if auth_mode == "supabase" and not supabase_url.startswith("https://"):
             raise ValueError("SUPABASE_URL must use HTTPS.")
@@ -114,6 +116,7 @@ class Settings:
             supabase_url=supabase_url or None,
             supabase_publishable_key=supabase_key,
             supabase_allowed_user_id=allowed_user_id,
+            supabase_allowed_email=allowed_email,
             max_report_file_bytes=positive_int("QDIAGNOSE_MAX_REPORT_FILE_BYTES", 10 * 1024 * 1024),
             max_report_files=positive_int("QDIAGNOSE_MAX_REPORT_FILES", 5),
             max_report_total_bytes=positive_int("QDIAGNOSE_MAX_REPORT_TOTAL_BYTES", 25 * 1024 * 1024),

@@ -70,12 +70,16 @@ async def authenticate_request(request: Request):
         return JSONResponse(status_code=503, content={"detail": "Could not verify the sign-in session."})
 
     try:
-        user_id = response.json().get("id")
+        user = response.json()
+        user_id = user.get("id")
+        email = user.get("email")
     except (ValueError, AttributeError):
         return JSONResponse(status_code=503, content={"detail": "Authentication returned an invalid response."})
     if not user_id:
         return JSONResponse(status_code=401, content={"detail": "The sign-in session has no user identity."})
-    if user_id != settings.supabase_allowed_user_id:
+    if settings.supabase_allowed_user_id and user_id != settings.supabase_allowed_user_id:
+        return JSONResponse(status_code=403, content={"detail": "This account is not authorized for this installation."})
+    if settings.supabase_allowed_email and (not isinstance(email, str) or email.strip().casefold() != settings.supabase_allowed_email):
         return JSONResponse(status_code=403, content={"detail": "This account is not authorized for this installation."})
 
     request.state.user_id = user_id

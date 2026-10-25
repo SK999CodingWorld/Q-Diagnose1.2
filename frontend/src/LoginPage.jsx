@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { Activity, ArrowLeft, ArrowRight, Eye, EyeOff, LockKeyhole, UserRound, Moon, Sun } from 'lucide-react';
+import { ArrowLeft, ArrowRight, KeyRound, Mail, Moon, Sun, UserRound } from 'lucide-react';
 import { useTheme } from './state/ThemeContext';
 import { useAuth } from './auth/AuthContext';
 import brandLogo from './assets/q-diagnose-logo.png';
 
 export default function LoginPage() {
   const { theme, toggleTheme } = useTheme();
-  const { configured: authConfigured, signIn } = useAuth();
-  const [showPassword, setShowPassword] = useState(false);
+  const { configured: authConfigured, requestSignInCode, verifySignInCode } = useAuth();
+  const [step, setStep] = useState('email');
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
   const [notice, setNotice] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -19,12 +21,17 @@ export default function LoginPage() {
     }
     setSubmitting(true);
     setNotice('');
-    const form = new FormData(event.currentTarget);
     try {
-      await signIn(String(form.get('email') || ''), String(form.get('password') || ''));
-      window.location.replace('/');
+      if (step === 'email') {
+        await requestSignInCode(email.trim());
+        setStep('code');
+        setNotice('A one-time sign-in code has been sent. Check your inbox and spam folder.');
+      } else {
+        await verifySignInCode(email.trim(), code.trim());
+        window.location.replace('/');
+      }
     } catch (error) {
-      setNotice(error.message || 'Sign-in failed. Check your email and password.');
+      setNotice(error.message || (step === 'email' ? 'Could not send a sign-in code. Try again shortly.' : 'That code could not be verified. Check it and try again.'));
     } finally {
       setSubmitting(false);
     }
@@ -46,26 +53,38 @@ export default function LoginPage() {
 
         <div className="login-card login-glass-card">
           <div className="login-heading">
-            <p className="login-kicker">WELCOME BACK</p>
-            <h2 id="login-title">Sign in</h2>
+            <p className="login-kicker">SECURE EMAIL SIGN-IN</p>
+            <h2 id="login-title">Sign in with a code</h2>
           </div>
 
           <form className="login-form" onSubmit={handleSubmit}>
             <label className="sr-only" htmlFor="login-email">Email address</label>
-            <div className="login-input-wrap"><UserRound size={16} aria-hidden="true" /><input id="login-email" name="email" type="email" autoComplete="username" placeholder="Email address" required /></div>
+            <div className="login-input-wrap"><UserRound size={16} aria-hidden="true" /><input id="login-email" name="email" type="email" autoComplete="email" placeholder="Email address" value={email} onChange={event => setEmail(event.target.value)} required disabled={step === 'code'} /></div>
 
-            <label className="sr-only" htmlFor="login-password">Password</label>
-            <div className="login-password-wrap">
-              <LockKeyhole className="login-password-icon" size={16} aria-hidden="true" />
-              <input id="login-password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Enter your password" required />
-              <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button>
-            </div>
+            {step === 'code' && <>
+              <label className="sr-only" htmlFor="login-code">Email verification code</label>
+              <div className="login-input-wrap"><KeyRound size={16} aria-hidden="true" /><input id="login-code" name="code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} placeholder="6-digit email code" value={code} onChange={event => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} required /></div>
+              <div className="login-options">
+                <button className="login-back-link" type="button" onClick={() => { setStep('email'); setCode(''); setNotice(''); }}><ArrowLeft size={14} aria-hidden="true" /> Use a different email</button>
+                <button className="login-back-link" type="button" disabled={submitting} onClick={async () => {
+                  setSubmitting(true);
+                  setNotice('');
+                  try {
+                    await requestSignInCode(email.trim());
+                    setNotice('A new sign-in code has been sent. Check your inbox and spam folder.');
+                  } catch (error) {
+                    setNotice(error.message || 'Could not resend the code. Wait a moment and try again.');
+                  } finally {
+                    setSubmitting(false);
+                  }
+                }}>Send another code</button>
+              </div>
+            </>}
 
-            <div className="login-options login-options-end"><a href="#password-help" onClick={(event) => { event.preventDefault(); setNotice(authConfigured ? 'Contact your administrator to reset your account password.' : 'Password recovery is unavailable because authentication is not configured in this local build.'); }}>Forgot password?</a></div>
-            <button className="login-submit" type="submit" disabled={submitting || !authConfigured}>{submitting ? 'Signing in…' : 'Sign in'} <ArrowRight size={17} aria-hidden="true" /></button>
+            <button className="login-submit" type="submit" disabled={submitting || !authConfigured}>{submitting ? (step === 'email' ? 'Sending code…' : 'Verifying…') : (step === 'email' ? 'Email me a sign-in code' : 'Verify code & sign in')} {step === 'email' ? <Mail size={17} aria-hidden="true" /> : <ArrowRight size={17} aria-hidden="true" />}</button>
             {notice && <p className="login-notice" role="status">{notice}</p>}
           </form>
-          <p className="login-disclaimer">{authConfigured ? 'Sign-in protected by Supabase Auth.' : 'Local preview · Authentication is not configured.'}</p>
+          <p className="login-disclaimer">{authConfigured ? 'We email a one-time verification code, never a reusable password.' : 'Local preview · Authentication is not configured.'}</p>
         </div>
       </section>
       </div>

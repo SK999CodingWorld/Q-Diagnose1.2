@@ -55,14 +55,15 @@ python run_app.py
 
 ### Optional Supabase Auth (single-owner protection)
 
-Authentication is disabled by default for local development. The optional Supabase integration validates the signed-in access token with Supabase Auth and allows only the single user UUID configured in `QDIAGNOSE_ALLOWED_USER_ID`. This is deliberately not multi-user authorization: app datasets, research experiments, and records still use the local SQLite database and have no per-user ownership boundary. Do not store real patient data or expose the service publicly on this setup.
+Authentication is disabled by default for local development. In Supabase mode, the provisioned owner enters their email and receives a one-time sign-in code; the app never emails reusable passwords and does not allow self-registration. The backend validates each access token with Supabase Auth and only permits the configured owner email (`QDIAGNOSE_ALLOWED_EMAIL`) or, for existing installations, the owner UUID (`QDIAGNOSE_ALLOWED_USER_ID`). This is deliberately not multi-user authorization: app datasets, research experiments, and records still use the local SQLite database and have no per-user ownership boundary. Do not store real patient data or expose the service publicly on this setup.
 
 1. Copy `.env.example` to `.env` and `frontend/.env.example` to `frontend/.env`.
 2. Set `QDIAGNOSE_AUTH_MODE=supabase`, the Supabase project URL, `SUPABASE_PUBLISHABLE_KEY` in the backend `.env`, and the same public key as `VITE_SUPABASE_PUBLISHABLE_KEY` in the frontend `.env`.
-3. Create the login user in Supabase Auth and set `QDIAGNOSE_ALLOWED_USER_ID` to that user's UUID.
-4. Restart the app and sign in with that account.
+3. Create or invite the owner account in Supabase Auth, then set `QDIAGNOSE_ALLOWED_EMAIL` to that same email in the backend environment. For an existing installation, the owner UUID can be retained instead.
+4. In Supabase Auth → Email Templates, configure the Magic Link template to include `{{ .Token }}` so Supabase sends a six-digit code. Set the Supabase Site URL and allowed redirect URLs to the deployed app origin.
+5. Restart the app, enter the allowed email, and verify the one-time code from the email.
 
-Only the publishable/anon key belongs in browser configuration. Never place a Supabase `service_role` or secret key in a `VITE_` variable or frontend bundle. The current integration uses Supabase Auth; it does not migrate app data to Supabase Postgres or enable RLS on the local SQLite store. A true multi-user release requires moving owned data to Postgres, adding `user_id` ownership, enabling and testing RLS policies, and reviewing file storage and audit requirements. See the [Supabase React Auth quickstart](https://supabase.com/docs/guides/auth/quickstarts/react) and [database security guide](https://supabase.com/docs/guides/database/secure-data).
+Only the publishable/anon key belongs in browser configuration. Never place a Supabase `service_role` or secret key in a `VITE_` variable or frontend bundle. Supabase's built-in email delivery has rate limits; configure custom SMTP before relying on this for a production user base. The current integration uses Supabase Auth; it does not migrate app data to Supabase Postgres or enable RLS on the local SQLite store. A true multi-user release requires moving owned data to Postgres, adding `user_id` ownership, enabling and testing RLS policies, and reviewing file storage and audit requirements. See the [Supabase passwordless email guide](https://supabase.com/docs/guides/auth/auth-email-passwordless) and [database security guide](https://supabase.com/docs/guides/database/secure-data).
 
 ### Public dataset catalog
 
