@@ -223,7 +223,7 @@ function Confusion({ matrix }: { matrix: number[][] | null | undefined }) {
           <div
             className="matrix-cell"
             key={`${rowIndex}-${columnIndex}`}
-            style={{ backgroundColor: `rgba(103, 232, 249, ${0.08 + (value / max) * 0.65})` }}
+            style={{ backgroundColor: `rgba(34, 139, 76, ${0.08 + (value / max) * 0.65})` }}
           >
             <span className="text-xl font-semibold text-white">{value}</span>
             <span className="text-[10px] text-slate-300">T{rowIndex} P{columnIndex}</span>
@@ -622,11 +622,11 @@ function App() {
   const completedCount = experiments.filter((item) => item.status === 'completed').length
 
   return (
-    <div className="min-h-screen bg-ink text-slate-200">
-      <header className="border-b border-line/70 bg-ink/90 backdrop-blur">
+    <div className="min-h-screen bg-page text-body">
+      <header className="border-b border-line/70 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1500px] items-center justify-between px-5 py-5 lg:px-8">
           <div className="flex items-center gap-3">
-            <div className="brand-mark">Q</div>
+            <img className="brand-logo" src="/q-diagnose-logo.png" alt="Q-Diagnose logo" />
             <div>
               <p className="text-lg font-semibold tracking-wide text-white">Q-Diagnose</p>
               <p className="text-[11px] uppercase tracking-[0.22em] text-accent">Quantum decision support lab</p>
