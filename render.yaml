@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: q-diagnose
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: QDIAGNOSE_HOST
+        value: 0.0.0.0
+      - key: QDIAGNOSE_AUTH_MODE
+        value: supabase
+      - key: SUPABASE_URL
+        value: https://yqtcvwuhtcdacyjoyxuj.supabase.co
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: QDIAGNOSE_ALLOWED_USER_ID
+        sync: false
+      - key: VITE_SUPABASE_URL
+        value: https://yqtcvwuhtcdacyjoyxuj.supabase.co
+      - key: VITE_SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: QDIAGNOSE_DATABASE_PATH
+        value: /tmp/qdiagnose.db
+      - key: QDIAGNOSE_UPLOAD_DIR
+        value: /tmp/qdiagnose-uploads

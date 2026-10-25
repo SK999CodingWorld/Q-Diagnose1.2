@@ -1,39 +1,24 @@
+# Python
 __pycache__/
+*.py[cod]
 .pytest_cache/
-*.pyc
-*.db
-frontend/node_modules/
-frontend/dist/
-frontend/*.tsbuildinfo
-frontend/vite.config.js
-frontend/vite.config.d.ts
-data/uploads/
-data/derived/
-*.log
-
-# Secrets: never commit real tokens. See .env.example for the supported names.
-.env
-.env.*
-!.env.example
-
-# Generated experiment artifacts
-phase1_results.json
-phase*_results.json
-*.tsbuildinfo
-
-# Virtual environments
-.venv/
-venv/
-env/
-
-# Tooling caches and coverage
-.vite/
-coverage/
 .coverage
 htmlcov/
+.venv/
+venv/
 
-# Editor / OS noise
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
+# Local configuration and runtime data
+.env
+qdiagnose.db
+uploads/*
+!uploads/.gitkeep
+
+# Frontend build and dependencies
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.vite/
+
+# Generated research outputs and caches
+*.log
+*.tsbuildinfo

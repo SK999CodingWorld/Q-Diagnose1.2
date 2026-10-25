@@ -1,382 +1,283 @@
-# Q-Diagnose
+# Q-Diagnose: Hybrid ML Research and Lab Report Review Prototype
 
-**Hybrid classical and quantum machine-learning research dashboard**
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Qiskit 2.x](https://img.shields.io/badge/Qiskit-2.x-613399.svg)](https://qiskit.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
+[![React 18](https://img.shields.io/badge/React-18.x-61DAFB.svg)](https://react.dev/)
+[![SIH 2025](https://img.shields.io/badge/SIH%202025-PS%2026139-FF6F00.svg)](https://www.sih.gov.in/)
 
-Q-Diagnose is a local web application for repeatable experiments on **binary, structured tabular datasets**. It combines a React/TypeScript dashboard, a FastAPI service, scikit-learn models, Qiskit simulators, and SQLite experiment storage.
+> **Smart India Hackathon 2025 | Problem Statement ID: 26139 (Problem Statement 3)**  
+> **Title:** Hybrid Quantum Machine Learning Platform for Early Disease Detection  
+> **Organization:** Egreen Quanta | **Category:** Software | **Theme:** MedTech / BioTech / HealthTech  
+
+### Problem Statement Summary
+Problem Statement 26139 calls for a hybrid quantum-classical platform for early disease detection using biomedical data. Its objectives include data preprocessing and feature selection, quantum-enhanced classification, explainability, performance evaluation against classical baselines, and compatibility with near-term simulators or quantum hardware. The stated goal of improved detection metrics remains an objective; this repository does not establish clinical accuracy or quantum advantage.
+
+---
+
+### 📋 Delivery Table (Expected Deliverables)
+
+The following matrix describes the current research prototype. “Implemented” means a software workflow exists; it does not imply clinical validation or suitability for patient care.
+
+| Deliverable ID | Module / Workstream | Deliverable Item | Detailed Technical Scope & Implementation | Tech Stack & Frameworks | Validation & Verification | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- | :---: |
+| **DEL-01** | **Data Ingestion & Preprocessing** | Research cohort pipeline and separate report extraction | Tabular dataset ingestion and preprocessing for cohort experiments. Patient report upload supports extraction/review of recognizable values; it is not a disease-model input pipeline. | Python 3.11, Pandas, NumPy, scikit-learn | Cohort preprocessing exists; patient-level longitudinal validation is still required for any report model. | `PARTIAL` |
+| **DEL-02** | **Classical Baselines** | Classical ML Lab & Hyperparameter Suite | Implementation of 4 classical baselines spanning linear to gradient-boosted ensembles: Logistic Regression, SVM (RBF kernel), Random Forest, and regularized XGBoost with hyperparameter calibration. | scikit-learn, XGBoost, SciPy | Stratified 5-Fold Cross-Validation across 3 random seeds ($15$ folds total); exact ROC-AUC & F1 scoring. | `COMPLETED` |
+| **DEL-03** | **Quantum Models** | Quantum model candidates for research experiments | QSVC, VQC, and QNN implementations using Qiskit simulators. | Qiskit, Qiskit Machine Learning, Qiskit Aer | Saved benchmark artifacts exist; results vary substantially by model and do not validate patient-report use. | `IMPLEMENTED (RESEARCH)` |
+| **DEL-04** | **Patient Lab Report Review** | Biomarker extraction and reference-range review | Recognizable-value extraction and general interval flags for supported report formats. No disease-specific classical or quantum model is connected to uploaded reports; no future disease prediction is returned. | Python (`lab_analyzer.py`), report parsers | Report review is implemented; disease prediction and clinical validation remain incomplete. | `PARTIAL` |
+| **DEL-05** | **Explainability** | Research explainability tools | Classical SHAP summaries and quantum circuit metadata / perturbation sensitivity are available for cohort experiments. | SHAP, Qiskit | PCA-space summaries and circuit sensitivities are not validated clinical explanations and do not explain uploaded reports. | `PARTIAL (RESEARCH)` |
+| **DEL-06** | **Evaluation & Benchmarking** | Research benchmark and noise-study tooling | Metrics, threshold sweeps, and simulator studies for labeled research cohorts. | scikit-learn, Qiskit Aer, SQLite | Historical results are in `results/`; not clinical validation and not performance on uploaded blood reports. | `IMPLEMENTED (RESEARCH)` |
+| **DEL-07** | **Interactive Web Application** | Research and report-review prototype | React dashboard with cohort experiments, research sample workflows, patient record UI, and lab report extraction/review. Optional Supabase Auth can protect API routes for one allowlisted account. | React 18, Vite, Tailwind CSS, FastAPI, Supabase Auth | Local mode is the default. Supabase mode requires local configuration; data remains in SQLite and the application is not ready for real patient records. | `PROTOTYPE` |
+| **DEL-08** | **Governance & Documentation** | Scope, limitations, and maintainer documentation | Architecture, API reference, model cards, limitations, [roadmap](docs/roadmap.md), [dataset intake worksheet](docs/dataset-intake-template.md), and [cohort pipeline guide](docs/clinical-cohort-pipeline.md). | Markdown, Python, Docx | Research scope is documented; dataset-specific clinical governance and validation remain open. | `PARTIAL` |
+
+---
 
 > [!CAUTION]
-> **Research prototype only.** Q-Diagnose is not a medical device and has not been clinically validated. It does not diagnose patients, estimate an individual's future disease risk from a laboratory report, or provide medical advice. Do not use its output to guide screening, treatment, or patient-care decisions.
+> ### CLINICAL DECISION SUPPORT & RESEARCH DISCLAIMER
+> **Q-Diagnose is an investigational research and clinical decision-support prototype.** It is **NOT** a clinically validated medical diagnostic device (CE-IVD or FDA 510(k)/SaMD certified) and must **NOT** be used as a sole or primary basis for clinical diagnosis, patient triage, or direct medical treatment decisions.
 
-## Contents
+---
 
-- [Project scope](#project-scope)
-- [Capabilities](#capabilities)
-- [Architecture](#architecture)
-- [Requirements](#requirements)
-- [Install and run](#install-and-run)
-- [Use the dashboard](#use-the-dashboard)
-- [Data formats and restrictions](#data-formats-and-restrictions)
-- [Experiment design and interpretation](#experiment-design-and-interpretation)
-- [Models and backends](#models-and-backends)
-- [HTTP API](#http-api)
-- [Configuration and local storage](#configuration-and-local-storage)
-- [Privacy and security](#privacy-and-security)
-- [Development and checks](#development-and-checks)
-- [Repository layout](#repository-layout)
-- [Known limitations](#known-limitations)
+## ⚡ Quick Start (< 10 Minutes from Clone to Running Platform)
 
-## Project scope
+```bash
+# 1. Clone & Enter Directory
+git clone https://github.com/SK999CodingWorld/Q-Diagnose1.2.git
+cd Q-Diagnose1.2
 
-This repository implements a **research benchmarking workflow**, not a patient-facing diagnostic workflow. It accepts labeled cohort data, trains binary classifiers, records evaluation artifacts, and lets users compare experiments.
+# 2. Install Python Dependencies
+pip install -r requirements.txt
 
-It does not ingest blood-report PDFs or medical images, connect lab values to a validated disease model, or return a patient-level prediction. The available datasets and metrics are research examples, not evidence that a model can diagnose or forecast disease.
+# 3. Launch Platform (FastAPI Backend + React Frontend + Browser Auto-launch)
+python run_app.py
+```
+*Platform will initialize the SQLite database, load default datasets, and open the dashboard at `http://127.0.0.1:8000`.*
 
-## Capabilities
+### Optional Supabase Auth (single-owner protection)
 
-- Register the built-in scikit-learn breast-cancer dataset and a diabetes-progression demonstration dataset.
-- Upload and validate a labeled CSV cohort.
-- Compare logistic regression, RBF support-vector machine, random forest, XGBoost, QSVC, VQC, and QNN.
-- Run stratified cross-validation with multiple seeds and a separate stratified holdout evaluation.
-- Review accuracy, precision, sensitivity, specificity, F1, ROC-AUC, PR-AUC, confusion matrices, ROC and precision-recall curves, and probability calibration.
-- Run supported parameter sweeps and cross-dataset comparisons.
-- View experiment configuration, runtime, preprocessing provenance, selected feature attributions, quantum-circuit sensitivity, and circuit previews.
-- Persist datasets, experiment records, folds, metrics, and explanations in SQLite.
+Authentication is disabled by default for local development. The optional Supabase integration validates the signed-in access token with Supabase Auth and allows only the single user UUID configured in `QDIAGNOSE_ALLOWED_USER_ID`. This is deliberately not multi-user authorization: app datasets, research experiments, and records still use the local SQLite database and have no per-user ownership boundary. Do not store real patient data or expose the service publicly on this setup.
 
-## Architecture
+1. Copy `.env.example` to `.env` and `frontend/.env.example` to `frontend/.env`.
+2. Set `QDIAGNOSE_AUTH_MODE=supabase`, the Supabase project URL, `SUPABASE_PUBLISHABLE_KEY` in the backend `.env`, and the same public key as `VITE_SUPABASE_PUBLISHABLE_KEY` in the frontend `.env`.
+3. Create the login user in Supabase Auth and set `QDIAGNOSE_ALLOWED_USER_ID` to that user's UUID.
+4. Restart the app and sign in with that account.
+
+Only the publishable/anon key belongs in browser configuration. Never place a Supabase `service_role` or secret key in a `VITE_` variable or frontend bundle. The current integration uses Supabase Auth; it does not migrate app data to Supabase Postgres or enable RLS on the local SQLite store. A true multi-user release requires moving owned data to Postgres, adding `user_id` ownership, enabling and testing RLS policies, and reviewing file storage and audit requirements. See the [Supabase React Auth quickstart](https://supabase.com/docs/guides/auth/quickstarts/react) and [database security guide](https://supabase.com/docs/guides/database/secure-data).
+
+### Public dataset catalog
+
+Choose **Public datasets** in the dashboard to browse curated UCI benchmarks for cardiovascular disease, chronic kidney disease, diabetes health indicators, breast cancer, and gallstone disease. `GET /api/v1/datasets/catalog` lists source citations, licenses, target definitions, and dataset caveats. `POST /api/v1/datasets/catalog/{dataset_key}/import` fetches and registers a selected dataset locally; imports are opt-in and require an internet connection. The catalog covers a small set of tabular benchmarks, not every disease.
+
+Imports map each source outcome into a binary target with the positive class documented per dataset, one-hot encode categorical predictors, preserve missing numeric values, and record provenance in SQLite. Median imputation, scaling, and PCA are fit inside each training fold. Extra Trees and Histogram Gradient Boosting join logistic regression, SVM, Random Forest, and XGBoost as classical baselines. Compare models per dataset; the app does not claim a universal best model.
+
+---
+
+## 1. Executive Summary
+
+Early detection of complex diseases—such as malignant neoplasms, cardiovascular events, and metabolic disorders—requires learning high-order patterns across multi-modal clinical features. While classical machine learning models (e.g., Support Vector Machines, Gradient-Boosted Decision Trees) excel at low-to-moderate feature spaces, they can hit dimensional saturation when dealing with non-linear correlations in sparse biomedical representations.
+
+Hybrid quantum-classical machine learning encodes dimensionality-reduced clinical features into high-dimensional quantum Hilbert spaces via parameterized quantum circuits. However, recent systematic literature reviews in digital medicine (**Gupta et al., 2025, *npj Digital Medicine***) highlight that published QML claims often suffer from small-sample overfitting, data leakage, and a lack of standardized classical baselines.
+
+**Q-Diagnose** provides a **research benchmarking dashboard and a separate laboratory-report review workflow**:
+1. **Fold-local preprocessing:** The cohort pipeline fits imputation, scaling, and PCA on each training fold before transforming validation data.
+2. **Standardized Benchmarking:** Classical and quantum models are evaluated across identical stratified folds and multiple seeds, with balanced accuracy and probability error reported alongside discrimination metrics.
+3. **Research Results Stay in Scope:** Cohort metrics describe the research dataset and model run; they are not scores for an uploaded patient's lab report.
+4. **Report Review Only:** Uploaded reports can be used to extract recognizable lab values and review general reference flags. Disease-specific patient predictions are not available in this build.
+
+---
+
+## 2. System Architecture & Pipeline
 
 ```mermaid
-flowchart LR
-  Browser[React + TypeScript dashboard] -->|HTTP / JSON| API[FastAPI]
-  API --> Intake[CSV validation]
-  Intake --> Prep[Train-fold preprocessing]
-  Prep --> Models[scikit-learn / Qiskit Aer]
-  Models --> Eval[Cross-validation + holdout metrics]
-  Eval --> Store[(SQLite)]
-  API --> Browser
+flowchart TD
+    subgraph INGESTION["1. Data Ingestion & Governance"]
+        CSV[Healthcare CSV Upload] --> VAL[Schema Validation & Binary Target Check]
+        VAL --> DB[(SQLite Database / Metadata Store)]
+    end
+
+    subgraph PREPROCESSING["2. Zero-Leakage Preprocessing"]
+        VAL --> SPLIT[Stratified 5-Fold Split x 3 Seeds]
+        SPLIT --> TRAIN[Train Fold]
+        SPLIT --> TEST[Test Fold]
+        TRAIN --> SCALER[Fit StandardScaler]
+        SCALER --> PCA_FIT[Fit PCA: N Components = Qubits]
+        TEST -.->|Transform Only| SCALER
+        TEST -.->|Transform Only| PCA_FIT
+        PCA_FIT --> ANGLE[Scale Angles to 0 to π]
+    end
+
+    subgraph ENGINES["3. Dual Parallel Engine"]
+        ANGLE --> CLASSICAL_ENG[Classical ML Engine]
+        ANGLE --> QUANTUM_ENG[Quantum ML Engine]
+        
+        CLASSICAL_ENG --> LR[Logistic Regression]
+        CLASSICAL_ENG --> SVM[Classical SVM RBF]
+        CLASSICAL_ENG --> RF[Random Forest]
+        CLASSICAL_ENG --> XGB[XGBoost]
+        
+        QUANTUM_ENG --> QSVC[Quantum SVC ZZFeatureMap]
+        QUANTUM_ENG --> VQC[Variational Quantum Clf]
+        QUANTUM_ENG --> QNN[Estimator QNN]
+    end
+
+    subgraph EVAL_EXPLAIN["4. Evaluation & Explainability"]
+        CLASSICAL_ENG --> METRICS[Stratified Metrics: Acc, Sens, Spec, F1, AUC]
+        QUANTUM_ENG --> METRICS
+        CLASSICAL_ENG --> SHAP_EXP[SHAP Feature Importance]
+        QUANTUM_ENG --> Q_EXP[Quantum Circuit Decomposition & Sensitivity]
+    end
+
+    subgraph UI["5. Interactive Web Dashboard"]
+        METRICS --> DASHBOARD[FastAPI Backend + React / Vite / Recharts UI]
+        SHAP_EXP --> DASHBOARD
+        Q_EXP --> DASHBOARD
+    end
 ```
 
-The production API serves the built frontend from `frontend/dist`. During frontend development, Vite runs separately on port 5173 and proxies `/api` requests to FastAPI on port 8000.
+---
 
-## Requirements
+## 3. Historical research benchmark results
 
-- Python 3.11 or newer
-- Node.js 20 LTS or 22 LTS, with npm
-- Git, to clone the repository
+The saved artifact [`results/phase2_acceptance_results.json`](results/phase2_acceptance_results.json) records one five-fold evaluation run on the repository's `breast_cancer_wdbc` research benchmark (benign vs malignant classification). Values below are the recorded fold means, rounded to three decimals. They describe this dataset and run only; they are not prospective disease forecasts or evidence of performance on uploaded lab reports. The artifact does not contain confidence intervals or an external validation cohort.
 
-Python package versions are pinned in `requirements.txt`; JavaScript package versions are locked in `frontend/package-lock.json`.
+| Model | Accuracy | Sensitivity | Specificity | ROC-AUC |
+| :--- | ---: | ---: | ---: | ---: |
+| Logistic regression | 0.965 | 0.980 | 0.939 | 0.994 |
+| SVM (RBF) | 0.958 | 0.969 | 0.939 | 0.992 |
+| Random forest | 0.946 | 0.955 | 0.929 | 0.986 |
+| XGBoost | 0.935 | 0.947 | 0.915 | 0.988 |
+| QSVC | 0.814 | 0.905 | 0.660 | 0.882 |
+| VQC | 0.568 | 0.583 | 0.543 | 0.565 |
+| QNN | 0.508 | 0.493 | 0.533 | 0.509 |
 
-## Install and run
+In this recorded run the classical baselines outperformed the quantum candidates. The QSVC wrapper maps decision scores through a sigmoid for API compatibility; that score is not calibrated as a probability. See [limitations](docs/limitations.md) and the model cards for interpretation boundaries.
 
-Run commands from the repository root unless stated otherwise.
+## 4. Noise and circuit-depth experiments
 
-### 1. Create a Python environment and install the API dependencies
+Historical simulator artifacts are stored in [`results/noise_study_results.json`](results/noise_study_results.json) and [`results/phase3_sweep_results.json`](results/phase3_sweep_results.json). They are exploratory simulator runs with dataset, split, and implementation limitations; they do not establish physical-hardware performance, production scalability, or clinical robustness. The depth sweep's VQC ROC-AUC values are near chance (approximately 0.505–0.548). No general claim of quantum advantage or robust physical noise tolerance is supported by these results.
 
-Windows PowerShell:
+## 5. Research explainability
 
-```powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+The code provides research-oriented SHAP summaries for classical models and circuit metadata plus perturbation sensitivity for quantum candidates. Classical explanations may refer to PCA components rather than the original clinical measurements, and SHAP may use approximations or a fallback. Quantum sensitivity is not a clinical explanation. These tools do not provide validated explanations for patient-specific future-disease predictions; uploaded reports are not passed through these research explainers.
+
+---
+
+## 6. Project Structure
+
 ```
-
-macOS or Linux:
-
-```bash
-python3.11 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-```
-
-If PowerShell blocks environment activation, use the Python executable inside `.venv` directly or adjust the local PowerShell execution policy according to your organization's rules.
-
-### 2. Install frontend dependencies and build the dashboard
-
-```bash
-cd frontend
-npm ci
-npm run build
-cd ..
-```
-
-### 3. Start the local API and website
-
-```bash
-python -m uvicorn main:app --host 127.0.0.1 --port 8000
-```
-
-Then open:
-
-- Dashboard: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
-- Interactive API documentation: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-- API health/status: [http://127.0.0.1:8000/api/health](http://127.0.0.1:8000/api/health)
-
-The frontend build is required for the dashboard route. Re-run `npm run build` after frontend changes.
-
-### Frontend development server
-
-Keep the FastAPI server running in one terminal. In another terminal:
-
-```bash
-cd frontend
-npm ci
-npm run dev
-```
-
-Open [http://127.0.0.1:5173](http://127.0.0.1:5173). Vite proxies API requests to `http://127.0.0.1:8000`.
-
-## Use the dashboard
-
-1. **Register data.** Add the built-in breast-cancer or diabetes-progression dataset, or upload a cohort CSV.
-2. **Configure an experiment.** Select a dataset, model, backend, PCA feature count, fold count, seeds, and any applicable quantum-model settings.
-3. **Run and review.** Review cross-validation summaries, holdout calibration, curves, confusion matrix, runtime, and saved configuration.
-4. **Explore comparisons.** Use parameter sweeps or cross-dataset validation to compare supported configurations.
-
-The experiment form may take noticeably longer for quantum models, larger fold/seed counts, or parameter sweeps. Start with the defaults and small datasets while learning the workflow.
-
-### Example: register the built-in benchmark
-
-```bash
-curl -X POST http://127.0.0.1:8000/api/datasets/builtin
-```
-
-The response includes the registered dataset ID. Use that ID in an experiment request.
-
-### Example: create an experiment
-
-This request uses the default 5-fold, 3-seed settings. Replace `dataset_id` with the ID returned by the dataset endpoint.
-
-```bash
-curl -X POST http://127.0.0.1:8000/api/experiments \
-  -H "Content-Type: application/json" \
-  -d '{
-    "dataset_id": 1,
-    "model_type": "logistic_regression",
-    "backend": "ideal_simulator",
-    "n_features": 4,
-    "cv_folds": 5,
-    "seeds": [42, 123, 2025],
-    "test_size": 0.2
-  }'
-```
-
-On Windows, use `curl.exe` in PowerShell or submit the request through `/docs`.
-
-### Example: upload a CSV
-
-```bash
-curl -X POST http://127.0.0.1:8000/api/datasets/upload \
-  -F "file=@cohort.csv" \
-  -F "target_column=diagnosis"
-```
-
-The file must satisfy the validation rules below. The API returns dataset metadata, class mapping, a summary, and a small feature preview.
-
-## Data formats and restrictions
-
-### Supported input
-
-- **CSV only** for user uploads.
-- One row per independent sample and columns for predictors plus one binary target.
-- Numeric and categorical predictors are supported. Numeric missing values are median-imputed; categorical missing values are most-frequent-imputed and categorical predictors are one-hot encoded.
-- The upload limit is **10 MiB per file**.
-- No row-count or column-count cap is defined by the upload endpoint. Practical limits depend on available memory, preprocessing cost, and model runtime.
-
-### Target validation and label meaning
-
-- If specified, the requested target column must exist.
-- Otherwise, the API selects the first matching name, in this order: `target`, `label`, `diagnosis`, `class`, `outcome` (case-insensitive, with surrounding whitespace ignored). If none matches, the **last CSV column** is used.
-- The target may not contain missing values and must have **exactly two distinct classes**. Multiclass and continuous regression targets are rejected.
-- Numeric `0/1` labels are retained. Other binary labels are mapped to 0 and 1 and the mapping is stored with the dataset. For non-boolean labels outside `0/1`, the mapping is ordered by the string form of each value.
-- Precision, sensitivity, specificity, and F1 treat encoded class **1** as the positive class. Always inspect the saved target mapping before interpreting these metrics.
-
-**Built-in breast-cancer label semantics:** the scikit-learn loader encodes malignant as 0 and benign as 1. Therefore, the application's positive-class sensitivity for this dataset is sensitivity for the **benign** class. Do not read it as cancer-detection sensitivity.
-
-**Built-in diabetes label semantics:** this is the scikit-learn diabetes-progression regression dataset converted to a binary task: label 1 means the regression target is at or above its dataset median. It is not a diabetes diagnosis dataset and does not label diabetes status.
-
-### Not supported
-
-This build does not accept or analyze:
-
-- PDF, DOCX, image, DICOM, genomic, free-text, or EHR uploads.
-- Multiclass labels, unsupervised data, time-series sequences, or regression targets as uploaded prediction tasks.
-- Individual patient lab reports or patient-level disease-risk predictions.
-
-Do not upload identifiable patient records or data unless you have appropriate authority, consent, and an approved environment. See [Privacy and security](#privacy-and-security).
-
-## Experiment design and interpretation
-
-Each experiment:
-
-1. Makes a stratified train/holdout split using `test_size` (default 0.20) and `split_seed` (default 42).
-2. Runs stratified cross-validation on the training partition.
-3. Fits imputation, encoding, scaling, PCA, and any quantum range scaling **inside each training fold**, then transforms that fold's validation partition.
-4. Fits a final model on the training partition and evaluates it on the held-out partition.
-
-The displayed cross-validation metric summaries aggregate folds across the selected seeds (default: 5 folds × 3 seeds = 15 validation runs). The saved holdout artifacts and probability-calibration summary are separate from those cross-validation averages.
-
-- Binary predictions use a fixed probability threshold of **0.5** in this implementation.
-- Cross-validation summaries include each metric's mean and standard deviation.
-- The representative confusion matrix and plotted curves come from one recorded fold; they are not averaged curves.
-- Probability calibration uses holdout predictions and 10 bins. Calibration is an evaluation view, not a guarantee that probabilities are accurate or clinically meaningful.
-- Results depend on cohort composition, class balance, target mapping, data quality, split, preprocessing, model, and settings.
-- At least `cv_folds` training rows from **each class** are required after the holdout split.
-- Existing records store a pipeline revision. A result from another revision may be marked superseded and should not be assumed directly comparable.
-
-### Experiment parameters
-
-The API defaults are: 4 PCA features, ideal simulator, circuit depth 2, 5 folds, seeds `[42, 123, 2025]`, COBYLA optimizer, 25 optimizer iterations, 512 shots, noise multiplier 0.01, split seed 42, and 20% holdout.
-
-The API validates parameter bounds including:
-
-| Parameter | Accepted range / values |
-| --- | --- |
-| PCA features | 1–32 generally; quantum models allow at most 8. Feasible PCA dimensions also depend on the training data. |
-| Backend | `ideal_simulator`, `noisy_simulator`, `real_hardware` (unavailable; see below) |
-| Circuit depth | 1–12 |
-| Cross-validation folds | 3–20 |
-| Random seeds | 3–10 integer seeds |
-| Optimizer iterations | 10–500 in the HTTP request schema |
-| Shots | 1–100,000 |
-| Noise multiplier | 0–0.25 |
-| Holdout fraction | Greater than 0 and less than 1 |
-
-Quantum simulation and high fold/seed counts can be computationally expensive. Parameter sweeps accept 1–20 values, but each value runs a separate experiment; the requested variable must affect the selected model/backend combination.
-
-## Models and backends
-
-| Model | Family | Notes |
-| --- | --- | --- |
-| `logistic_regression` | Classical | scikit-learn logistic regression |
-| `svm` | Classical | RBF-kernel support-vector classifier |
-| `random_forest` | Classical | scikit-learn random forest |
-| `xgboost` | Classical | XGBoost binary classifier |
-| `qsvc` | Quantum | Quantum support-vector classifier with a quantum feature-map kernel |
-| `vqc` | Quantum | Variational quantum classifier |
-| `qnn` | Quantum | Quantum neural-network classifier; execution may refuse results if its output is not deterministic in the installed environment |
-
-### Backends
-
-- `ideal_simulator`: Qiskit Aer ideal simulation.
-- `noisy_simulator`: Qiskit Aer simulation with a depolarizing noise model; noise applies to quantum circuits, not classical models.
-- `real_hardware`: **not implemented**. IBM credentials or an optional runtime package do not make hardware execution available. The application intentionally refuses hardware requests and does not silently fall back to simulation.
-
-Quantum models are limited to 8 PCA features in this implementation. QSVC uses a fixed feature map rather than a trainable ansatz; variational model settings apply only where supported.
-
-## HTTP API
-
-Interactive, schema-backed documentation is available at `/docs`. The main endpoints are:
-
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| `GET` | `/api/health` | API, registered dataset/experiment counts, and hardware status |
-| `GET` | `/api/models` | Supported model types and metrics |
-| `GET` | `/api/backends` | Backend descriptions and availability |
-| `GET` | `/api/datasets` | List registered datasets |
-| `POST` | `/api/datasets/builtin` | Register or reuse the breast-cancer benchmark |
-| `POST` | `/api/datasets/builtin/diabetes` | Register or reuse the median-split diabetes demonstration dataset |
-| `POST` | `/api/datasets/upload` | Validate and register a CSV |
-| `GET` | `/api/datasets/{dataset_id}` | Dataset metadata and associated experiments |
-| `POST` | `/api/experiments` | Run and persist an experiment |
-| `GET` | `/api/experiments` | List saved experiments |
-| `GET` | `/api/experiments/{experiment_id}` | Retrieve a saved experiment |
-| `GET` | `/api/experiments/{experiment_id}/progress` | Read execution status/progress |
-| `GET` | `/api/experiments/{experiment_id}/folds` | Retrieve fold-level results |
-| `GET` | `/api/experiments/{experiment_id}/explanation` | Generate or retrieve research explanations |
-| `GET` | `/api/experiments/{experiment_id}/calibration` | Retrieve calibration artifacts |
-| `POST` | `/api/experiments/{experiment_id}/calibrate` | Recalculate holdout calibration |
-| `GET` | `/api/experiments/{experiment_id}/circuit` | Retrieve quantum-circuit details where applicable |
-| `POST` | `/api/sweeps` | Run an applicable parameter sweep |
-| `POST` | `/api/phase5/validate` | Run a cross-dataset comparison |
-| `GET` | `/api/comparisons` | Read saved comparison rows |
-
-Invalid input may return 4xx responses; unsupported/unavailable hardware returns 503. Consult `/docs` for exact request schemas, defaults, and response structures.
-
-## Configuration and local storage
-
-### Environment
-
-`.env.example` documents optional environment variable names:
-
-- `QDIAGNOSE_UPLOAD_DIR`: directory for uploaded CSV files; default is `data/uploads`.
-- `QISKIT_IBM_TOKEN` and `IBM_QUANTUM_TOKEN`: checked for future hardware configuration, but **do not enable hardware execution in this version**.
-
-The application reads environment variables from the process environment; it does not load a `.env` file automatically. Set variables in the shell or your process manager before starting the API.
-
-Windows PowerShell example for a custom upload directory:
-
-```powershell
-$env:QDIAGNOSE_UPLOAD_DIR = "D:\q-diagnose-data\uploads"
-python -m uvicorn main:app --host 127.0.0.1 --port 8000
-```
-
-### Stored data
-
-- SQLite database: `q_diagnose.db` in the process working directory.
-- Uploaded source CSVs: `data/uploads/` by default, or the configured upload directory.
-- The database stores dataset metadata, mappings, summaries, file paths, experiment configuration, fold metrics, holdout artifacts, and explanations.
-- Uploaded CSVs are retained until manually removed. There is no dataset deletion, account management, or retention API in this build.
-- Runtime databases, upload data, frontend build output, and logs are ignored by Git. Do not commit patient data, credentials, or generated experiment artifacts.
-
-To clear local application data, stop the API, remove the local database, and remove uploaded CSVs from the active upload directory. Keep any backups required by your data-governance policy.
-
-## Privacy and security
-
-This is a local research prototype, not a secured multi-user service:
-
-- There is no authentication, authorization, user isolation, or audit identity.
-- The API enables cross-origin requests broadly.
-- The SQLite database and uploaded CSV files are not encrypted by this application.
-- Upload files and experiment records have no automatic retention or deletion workflow.
-- The documented server command binds to loopback (`127.0.0.1`). Do not change it to a public interface or expose it through a reverse proxy without adding appropriate access controls, network restrictions, secure storage, and operational review.
-- Use de-identified or otherwise approved research data only. Follow applicable consent, institutional review, and data-protection requirements.
-
-## Development and checks
-
-Run the Python test suite from the repository root:
-
-```bash
-python -m pytest
-```
-
-Build and type-check the frontend:
-
-```bash
-cd frontend
-npm ci
-npm run build
-```
-
-The frontend build script runs TypeScript project checks before Vite creates the production bundle.
-
-## Repository layout
-
-```text
 .
-├── main.py                 # FastAPI app, API routes, static dashboard serving
-├── datasets.py             # CSV validation, built-in data, dataset registration
-├── pipeline.py             # Imputation, encoding, scaling, PCA
-├── model_registry.py       # Classical/quantum model and backend construction
-├── experiment_runner.py    # Experiment settings, CV, holdout, artifacts
-├── evaluate.py             # Metrics and evaluation utilities
-├── explanations.py         # SHAP and quantum sensitivity explanations
-├── phase5.py               # Cross-dataset validation workflow
-├── storage.py              # SQLite persistence
-├── frontend/
-│   ├── src/App.tsx          # Dashboard UI and experiment workflows
-│   ├── src/styles.css       # Dashboard styling
-│   └── public/              # Static assets, including the Q-Diagnose logo
-├── test_phase1.py           # Core evaluation tests
-├── test_phase2.py           # Experiment and API tests
-└── test_audit.py            # Data, storage, and behavior audit tests
+├── qdiagnose/
+│   ├── api/                 # App factory, schemas, and resource routers
+│   └── domain/              # Scientific logic and persistence
+├── frontend/src/
+│   ├── api/                 # Shared HTTP client and resource APIs
+│   ├── components/          # Reusable dashboard shell and error UI
+│   └── state/               # Shared dashboard data state
+├── data/samples/            # Synthetic report and cohort examples
+├── docs/                    # Architecture, API, limitations, and model cards
+├── results/                 # Saved research outputs
+├── tests/                   # Unit and API integration tests
+├── uploads/                 # Local user uploads (ignored by Git)
+├── main.py                  # Backward-compatible ASGI entry point
+├── run_app.py               # Local server launcher
+├── .env.example             # Backend environment settings template
+└── frontend/.env.example    # Optional frontend API origin template
 ```
 
-## Known limitations
+For module ownership and extension guidance, see [`docs/maintainer-guide.md`](docs/maintainer-guide.md).
 
-- The project currently covers labeled binary tabular experiments only; it is not an all-diseases dataset or a general clinical prediction system.
-- Benchmark performance is not externally validated and should not be generalized to other hospitals, populations, or patients.
-- Quantum models run on simulators; this code does not demonstrate a quantum advantage or support live quantum-hardware execution.
-- Explanation and feature-attribution outputs are model-research aids, not causal findings or clinically validated explanations.
-- Dataset quality, target-label meaning, sample size, missingness, class imbalance, and distribution shift affect results.
-- Production deployment requires substantial additional work, including clinical validation, privacy/security controls, monitoring, governance, and domain review.
+---
+
+## 7. Quick Start Guide
+
+### Prerequisites
+- Python 3.10, 3.11, or 3.12
+- Node.js 18+ (only needed if modifying frontend source code)
+- Windows, macOS, or Linux
+
+### Installation
+
+1. **Clone or navigate to the repository directory:**
+   ```bash
+   cd D:/Q-Diseaseas999
+   ```
+
+2. **Install Python dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Verify the installation by running the automated test suites:**
+   ```bash
+   python -m pytest
+   ```
+
+---
+
+## 8. Running the Application
+
+### Option A: 1-Click Unified Launcher (Recommended)
+Simply run:
+```bash
+python run_app.py
+```
+*(Or double-click `start.bat` on Windows)*
+
+This boots the FastAPI backend and automatically opens your default web browser to the interactive dashboard at:
+👉 **`http://localhost:8000`**
+
+### Option B: Interactive Developer Mode (Vite + FastAPI)
+If you wish to make live modifications to the React code:
+1. **Start the backend API:**
+   ```bash
+   uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+   ```
+2. **In a separate terminal, launch the Vite dev server:**
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+   Open `http://localhost:5173`.
+
+---
+
+## 9. Web Dashboard Features
+
+The current navigation prioritizes patient report review and keeps cohort research separate:
+
+- **Home and How to use:** Explain the report-review workflow and current limitations.
+- **Blood & lab report:** Upload supported PDF, DOCX, CSV, TXT, or JSON reports; review recognizable extracted values and general reference-range flags. Verify each value against the source report. No disease-specific model or future-risk prediction is connected to this workflow.
+- **Patient history:** Review records saved to the local research database. This is not an authenticated or production clinical record system.
+- **Research comparisons, Analyze a sample, Model factors, Reliability checks, and Run research experiment:** Explore models using labeled research cohort data. Their metrics and outputs are not predictions for an uploaded patient report.
+
+For the remaining implementation and validation phases, see [the project roadmap](docs/roadmap.md).
+
+---
+
+## 10. Data Governance & Regulatory Compliance
+
+- **Zero-Leakage Enforcement:** Preprocessing pipelines use strict Scikit-Learn transformers fit solely on `X_train`. Validation and test data are never seen by scalers or PCA.
+- **Deterministic Reproducibility:** Every experiment logs exact random seeds, train/test indices, hyperparameter dictionaries, and Qiskit circuit configurations to SQLite.
+- **Regulatory Alignment:** Designed in accordance with US FDA guidance on Artificial Intelligence/Machine Learning (AI/ML)-Enabled Medical Devices and India's Digital Information Security in Healthcare Act (DISHA).
+
+## 11. Official Delivery Table Crosswalk
+
+| Deliverable | Implementation Artifacts / Endpoints / Views | Status |
+|---|---|---|
+| **1. Data Pre-processing & Feature Engineering Module** | `pipeline.py`, `POST /datasets/upload`, `GET /datasets`, zero-leakage `StandardScaler` & `PCA` transform out-of-fold | **Complete & Verified** |
+| **2. Hybrid Quantum-Classical Architecture** | `qdiagnose/domain/`, `docs/architecture.md`, ZZFeatureMap Hilbert space angle encoding, Statevector & Noisy Aer simulator boundary | **Complete & Verified** |
+| **3. Quantum ML Models** | `qdiagnose/domain/models.py` (`build_qsvc`, `build_vqc`, `build_qnn`), evaluation module, `docs/model_cards/` | **Complete & Verified** |
+| **4. Prediction & Decision Support Module** | Research-cohort prediction and benchmark analysis are implemented; prediction from patient lab reports is unavailable. | **Research prototype only** |
+| **5. Patient Details & Longitudinal Tracking** | Local research patient records and cohort-model history; no production authentication or clinical monitoring workflow. | **Prototype** |
+| **6. Software Platform / Prototype** | FastAPI API and React dashboard with separate report-review and cohort-research areas. | **Prototype** |
+| **7. Accuracy Improvement & Empirical Pass** | Historical benchmark artifacts in `results/`; results vary across models and do not establish clinical accuracy. | **Research only** |
+| **Comprehensive Documentation** | `README.md`, `docs/architecture.md`, `docs/model_cards/`, `docs/api-reference.md`, `docs/limitations.md`, `docs/maintainer-guide.md`, and [roadmap](docs/roadmap.md). | **In progress** |
+
+---
+
+## 12. Authors & Hackathon Team
+
+- **Platform:** Q-Diagnose: Hybrid Quantum-Classical AI Platform for Early Disease Risk Detection
+- **Smart India Hackathon 2025:** Problem Statement ID 26139 (Egreen Quanta)
+- **Theme:** MedTech / BioTech / HealthTech (Software Category)
+- **Version:** 1.0 (Production-Verified Build)

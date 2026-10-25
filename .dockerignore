@@ -1,0 +1,15 @@
+.git
+.push-checkout
+Q-Diagnose
+.env
+**/.env
+.pytest_cache
+**/__pycache__
+**/*.py[cod]
+frontend/node_modules
+frontend/dist
+uploads
+data
+results
+qdiagnose.db
+*.log

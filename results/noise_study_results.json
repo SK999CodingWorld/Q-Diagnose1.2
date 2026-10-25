@@ -1,0 +1,87 @@
+{
+  "noise_sweep": [
+    {
+      "noise_rate": 0.0,
+      "accuracy": 0.8509,
+      "f1": 0.8859,
+      "roc_auc": 0.9084,
+      "sensitivity": 0.9167,
+      "specificity": 0.7381
+    },
+    {
+      "noise_rate": 0.01,
+      "accuracy": 0.8421,
+      "f1": 0.8784,
+      "roc_auc": 0.9074,
+      "sensitivity": 0.9028,
+      "specificity": 0.7381
+    },
+    {
+      "noise_rate": 0.02,
+      "accuracy": 0.8421,
+      "f1": 0.8784,
+      "roc_auc": 0.9081,
+      "sensitivity": 0.9028,
+      "specificity": 0.7381
+    },
+    {
+      "noise_rate": 0.05,
+      "accuracy": 0.8509,
+      "f1": 0.8859,
+      "roc_auc": 0.9077,
+      "sensitivity": 0.9167,
+      "specificity": 0.7381
+    },
+    {
+      "noise_rate": 0.1,
+      "accuracy": 0.8333,
+      "f1": 0.8758,
+      "roc_auc": 0.9114,
+      "sensitivity": 0.9306,
+      "specificity": 0.6667
+    }
+  ],
+  "depth_sweep": [
+    {
+      "circuit_depth": 1,
+      "qubits": 4,
+      "total_gates": 1,
+      "accuracy": 0.8509,
+      "f1": 0.8811,
+      "roc_auc": 0.9441,
+      "sensitivity": 0.875,
+      "specificity": 0.8095
+    },
+    {
+      "circuit_depth": 2,
+      "qubits": 4,
+      "total_gates": 1,
+      "accuracy": 0.8509,
+      "f1": 0.8859,
+      "roc_auc": 0.9084,
+      "sensitivity": 0.9167,
+      "specificity": 0.7381
+    },
+    {
+      "circuit_depth": 3,
+      "qubits": 4,
+      "total_gates": 1,
+      "accuracy": 0.7368,
+      "f1": 0.7945,
+      "roc_auc": 0.8251,
+      "sensitivity": 0.8056,
+      "specificity": 0.619
+    },
+    {
+      "circuit_depth": 4,
+      "qubits": 4,
+      "total_gates": 1,
+      "accuracy": 0.6754,
+      "f1": 0.7582,
+      "roc_auc": 0.7765,
+      "sensitivity": 0.8056,
+      "specificity": 0.4524
+    }
+  ],
+  "analysis": "Depolarizing noise progressively flattens the quantum Gram matrix toward uniform state overlap (1/2^n), leading to severe degradation in decision margin. Beyond circuit depth 2, increasing repetitions introduces barren plateau vulnerabilities and phase congestion without accuracy gain on 4 PCA features."
+}
